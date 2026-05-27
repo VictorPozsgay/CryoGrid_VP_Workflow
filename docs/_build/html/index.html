@@ -1,0 +1,211 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎯 CryoGrid Optimization Automatization 🎯 &mdash; CryoGrid_Optimization_Automatization 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            CryoGrid_Optimization_Automatization
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting &amp; Common Errors</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">CryoGrid_Optimization_Automatization</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">🎯 CryoGrid Optimization Automatization 🎯</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div style="text-align:center; margin:20px 0;">
+  <img src="_static/banner.png" alt="Banner" style="width:100%; border-radius:10px;"/>
+</div>
+<section id="cryogrid-optimization-automatization">
+<h1>🎯 CryoGrid Optimization Automatization 🎯<a class="headerlink" href="#cryogrid-optimization-automatization" title="Link to this heading"></a></h1>
+<p>Welcome to the documentation of <strong>CryoGrid Optimization Automatization</strong>.<br />
+This project provides a fully automated MATLAB workflow to calibrate and optimize CryoGrid simulations using
+measured near-surface temperature for  modelling mountain permafrost temperature.</p>
+<p>As the variability of snow cover pattern in mountain environment makes snow depth one of the most
+challenging parameter to calibrate, this workflow is particularly designed to retrieve snow characteristics,
+especially snow fraction (i.e. the proportion of deposited snow when a snowfall occurs).</p>
+<p>It automates the entire process of:</p>
+<ul class="simple">
+<li><p>Recovering sensor characteristics measured temperature in an Excel file gathering sensors metadata</p></li>
+<li><p>Updating CryoGrid input files based on sensor characteristics</p></li>
+<li><p>Detecting snow periods from daily temperature measurements</p></li>
+<li><p>Running Bayesian optimization (<code class="docutils literal notranslate"><span class="pre">bayesopt</span></code>) to infer physical parameters</p></li>
+<li><p>Generating statistics and plots for model performance evaluation</p></li>
+</ul>
+<hr class="docutils" />
+<section id="key-features">
+<h2>🛠️ Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Automated Calibration:</strong> No manual parameter tuning is required.</p></li>
+<li><p><strong>Snow Detection Module:</strong> Analyzes daily temperature variations to detect snow cover periods.</p></li>
+<li><p><strong>Optimization method:</strong> Global optimization via Bayesian inference.</p></li>
+<li><p><strong>Modular MATLAB Workflow:</strong> Organized in four stages for clarity and reusability.</p></li>
+<li><p><strong>Scalable to Multiple Sensors:</strong> Adaptability to different sensor configuration.</p></li>
+<li><p><strong>Parallelized code:</strong> Parallelization to reduce optimization time. Workflow with lock mechanisms to prevent conflicts.</p></li>
+</ul>
+</section>
+<hr class="docutils" />
+<section id="project-structure">
+<h2>📂 Project Structure<a class="headerlink" href="#project-structure" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">CryoGrid_Optimization_Automatization/</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/</span></code> → MATLAB scripts</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">data/</span></code> → Sensor data files (CSV) and global excel file with all the sensors metadata</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forcing/</span></code> →  Sensor forcing data files (.mat) and automatization forcing scripts</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CryoGrid/</span></code> → All the CryoGrid scripts and file, <code class="docutils literal notranslate"><span class="pre">CryoGridCommunity_results/</span></code> is the optimization
+output folder</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/</span></code> → Documentation (Sphinx)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<hr class="docutils" />
+<section id="documentation-overview">
+<h2>📑 Documentation Overview<a class="headerlink" href="#documentation-overview" title="Link to this heading"></a></h2>
+<p>This documentation is organized into several sections:</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#code-launch">Code launch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#data-preparation">Data Preparation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#matlab-path">MATLAB Path</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#add-matlab-path">Add MATLAB Path</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#overview-of-scripts">Overview of Scripts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#input-data">Input Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#running-the-optimization">Running the Optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#parallelisation">Parallelisation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#parameters-and-configuration">Parameters and Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#output-results">Output Results</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#matlab-script-settings">MATLAB Script Settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#cryogrid-excel-parameters">CryoGrid Excel Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#optimization-options">Optimization Options</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#project-architecture-uml-diagram">Project Architecture (UML Diagram)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#main-script">Main Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#workflow-functions-src-functions">Workflow Functions (src/functions)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#optimization-logic">Optimization Logic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#cryogrid-modules-cryogrid">CryoGrid Modules (CryoGrid/)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#data-structure">Data Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#temperature-profile-initialization-logic">Temperature profile initialization logic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#score-logic">Score logic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#extending-the-code">Extending the Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting &amp; Common Errors</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#matlab-errors">⚠️ MATLAB Errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#file-path-issues">📂 File &amp; Path Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#cryogrid-issues">CryoGrid issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#optimization-issues">⚡ Optimization Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#issues-in-the-objective-function">Issues in the objective function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#best-practices">✅ Best Practices</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Fribault.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

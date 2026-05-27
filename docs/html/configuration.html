@@ -1,0 +1,222 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuration &mdash; CryoGrid_Optimization_Automatization 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="prev" title="Usage" href="usage.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CryoGrid_Optimization_Automatization
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#matlab-script-settings">MATLAB Script Settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cryogrid-excel-parameters">CryoGrid Excel Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#optimization-options">Optimization Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-matlab-configuration">Example MATLAB Configuration</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting &amp; Common Errors</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CryoGrid_Optimization_Automatization</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Configuration</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/configuration.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="configuration">
+<h1>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h1>
+<p>This page explains how to configure the <strong>CryoGrid Optimization Automatization</strong> project before running it.</p>
+<section id="matlab-script-settings">
+<h2>MATLAB Script Settings<a class="headerlink" href="#matlab-script-settings" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">main_optimization_parallel.m</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">sensor_ID</span></code> : ID of the sensor to study</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sensor_file</span></code> : path to the (<code class="docutils literal notranslate"><span class="pre">Sensor_Dataset.xlsx</span></code>) file with all the sensor metadata</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">daily_mean_sensors_folder</span></code> : path to daily_mean CSV folder</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forcing_folder</span></code> : path to .mat forcing files in the (<code class="docutils literal notranslate"><span class="pre">forcing/</span></code>) folder</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cryogrid_excel_file</span></code> : path to (<code class="docutils literal notranslate"><span class="pre">CG_single.xlsx</span></code>), the CryoGrid parametrisation file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cryogrid_source_path</span></code> : path to (<code class="docutils literal notranslate"><span class="pre">CryoGridCommunity_source/</span></code>), the CryoGrid source folder</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cryogrid_results_path</span></code> : path to (<code class="docutils literal notranslate"><span class="pre">CryoGridCommunity_results/</span></code>), the CryoGrid results folder
+and the optimization output folder also</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">season_weigths</span></code> : value of weights for each season in scoring</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_iterations</span></code> : number of Bayesian optimization iterations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">step_time</span></code> : step for CryoGrid (recommended 0.25)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="cryogrid-excel-parameters">
+<h2>CryoGrid Excel Parameters<a class="headerlink" href="#cryogrid-excel-parameters" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">CG_single.xlsx</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">albedo</span></code> : surface albedo to optimize. Physical bounds in mountain are most of the time between 0.05
+and 0.55</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">z0</span></code> : roughness length in meter.
+It is related to the roughness characteristics of the terrain.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">snow_fraction</span></code> : snow fraction, it depends on the field characteristics.
+It’s the snow quantity that stay on the ground, and this phenomenon has thermal properties. This
+parameter is optimized only if the <code class="docutils literal notranslate"><span class="pre">detect_snow_presence</span></code> function detects more than 15 average
+snow day per year.</p></li>
+</ul>
+</li>
+</ul>
+<p>Then, there are a lot of parameters you can change in this file. The sensor metadata like <code class="docutils literal notranslate"><span class="pre">altitude</span></code>,
+<code class="docutils literal notranslate"><span class="pre">slope_angle</span></code>, <code class="docutils literal notranslate"><span class="pre">sky_view_factor</span></code>, … are automatically modified in this file.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">CONSTANTS_excel.xlsx</span></code>:</p>
+<ul>
+<li><p>default values and boundaries for parameters</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="optimization-options">
+<h2>Optimization Options<a class="headerlink" href="#optimization-options" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">season_weights</span></code> : In function of your objective, you can give more importance to a season.
+This allows the optimization program to focus more on the performance during this season.</p></li>
+<li><p>Bayesian parameter bounds for <code class="docutils literal notranslate"><span class="pre">albedo</span></code>, <code class="docutils literal notranslate"><span class="pre">z0</span></code>, <code class="docutils literal notranslate"><span class="pre">snow_fraction</span></code>.
+You should adapt it to your configuration and your sensor location properties.</p></li>
+<li><p>Parallel workers configuration. In this code, all the usable worker are used for the optimization.</p></li>
+</ul>
+<section id="example-matlab-configuration">
+<h3>Example MATLAB Configuration<a class="headerlink" href="#example-matlab-configuration" title="Link to this heading"></a></h3>
+<div class="highlight-matlab notranslate"><div class="highlight"><pre><span></span><span class="n">sensor_ID</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&#39;MON1&#39;</span><span class="p">;</span>
+<span class="n">sensor_file</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&#39;data/PAPROG_Data_set.xlsx&#39;</span><span class="p">;</span>
+<span class="n">daily_mean_sensors_folder</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&#39;Users/Documents/CryoGrid_Optimisation_Automatization/data/Daily_mean&#39;</span><span class="p">;</span>
+<span class="n">forcing_folder</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&#39;Users/Documents/CryoGrid_Optimisation_Automatization/Forcing/Forcing_Data&#39;</span><span class="p">;</span>
+<span class="n">cryogrid_excel_file</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&#39;CryoGrid/CryoGridCommunity_results/CG_single.xlsx&#39;</span><span class="p">;</span>
+<span class="n">cryogrid_source_path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&#39;CryoGrid/CryoGridCommunity_source&#39;</span><span class="p">;</span>
+<span class="n">cryogrid_results_path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&#39;CryoGrid/CryoGridCommunity_results/&#39;</span><span class="p">;</span>
+<span class="n">season_weights</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">struct</span><span class="p">(</span><span class="s">&#39;winter&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;spring&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;summer&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="s">&#39;autumn&#39;</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">);</span>
+<span class="n">n_iterations</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">80</span><span class="p">;</span>
+<span class="n">step_time</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.25</span><span class="p">;</span>
+
+<span class="n">params_config</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">struct</span><span class="p">();</span>
+
+
+<span class="c">%----- Snow Fraction -----</span>
+<span class="n">params_config</span><span class="p">.</span><span class="n">snow_fraction</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">struct</span><span class="p">(</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;low_snow_bounds&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.4</span><span class="p">],</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;high_snow_bounds&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.2</span><span class="p">],</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;no_snow_bounds&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[],</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;always_optimize&#39;</span><span class="p">,</span><span class="w"> </span><span class="nb">false</span><span class="p">,</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;fixed_if_no_snow&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">...</span>
+<span class="p">);</span>
+
+
+
+<span class="c">%----- Albedo -----</span>
+
+<span class="n">params_config</span><span class="p">.</span><span class="n">albedo</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">struct</span><span class="p">(</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;bounds&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.55</span><span class="p">],</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;always_optimize&#39;</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="w"> </span><span class="k">...</span>
+<span class="p">);</span>
+
+
+<span class="c">%----- z0 -----</span>
+
+<span class="n">params_config</span><span class="p">.</span><span class="n">z0</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">struct</span><span class="p">(</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;bounds&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mf">0.7</span><span class="p">],</span><span class="w"> </span><span class="k">...</span>
+<span class="w">    </span><span class="s">&#39;always_optimize&#39;</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="w"> </span><span class="k">...</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="usage.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Fribault.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+# MATLAB
+*.asv
+*.m~
+*.autosave
+slprj/
+codegen/
+*.mex*
+*.p
+*.fig
+
+# MATLAB data
+*.mat
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# Project folders
+run_examples/
+data/
+forcing/

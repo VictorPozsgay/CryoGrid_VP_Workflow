@@ -1,0 +1,456 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; CryoGrid_Optimization_Automatization 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Troubleshooting &amp; Common Errors" href="troubleshooting.html" />
+    <link rel="prev" title="Configuration" href="configuration.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CryoGrid_Optimization_Automatization
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#project-architecture-uml-diagram">Project Architecture (UML Diagram)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#main-script">Main Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#workflow-functions-src-functions">Workflow Functions (src/functions)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#optimization-logic">Optimization Logic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cryogrid-modules-cryogrid">CryoGrid Modules (CryoGrid/)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-structure">Data Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#temperature-profile-initialization-logic">Temperature profile initialization logic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#score-logic">Score logic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extending-the-code">Extending the Code</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#adding-a-new-sensor">Adding a New Sensor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adding-a-new-parameter-to-optimize">Adding a New Parameter to Optimize</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting &amp; Common Errors</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CryoGrid_Optimization_Automatization</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<p>This section provides a detailed overview of the MATLAB functions, scripts, and structure of the
+<strong>CryoGrid Optimization Automatization</strong> project.</p>
+<hr class="docutils" />
+<section id="project-architecture-uml-diagram">
+<h2>Project Architecture (UML Diagram)<a class="headerlink" href="#project-architecture-uml-diagram" title="Link to this heading"></a></h2>
+<div style="overflow-x: auto; border: 1px solid #ddd; padding: 10px; width: 100%;">
+  <div style="width: 1200px;"> <!-- largeur réelle de l'image -->
+    <img src="_static/uml_diagram.png" alt="UML Diagram" style="width: 100%; height: auto;">
+  </div>
+</div>
+<p>The above diagram summarizes how the main script (<code class="docutils literal notranslate"><span class="pre">main_optimization_parallel.m</span></code>) interacts with the
+helper functions and CryoGrid modules.</p>
+</section>
+<section id="main-script">
+<h2>Main Script<a class="headerlink" href="#main-script" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">main_optimization_parallel</span><span class="o">.</span><span class="n">m</span>
+</pre></div>
+</div>
+<p>Feature	Description :</p>
+<ul class="simple">
+<li><p>Role : Entry point for the entire workflow. Handles setup, optimization, and output generation.</p></li>
+<li><p>Inputs : Sensor ID, paths to (<code class="docutils literal notranslate"><span class="pre">data/forcing</span></code>) folders, CryoGrid input Excel file and path, optimization settings.</p></li>
+<li><p>Outputs : Results in (<code class="docutils literal notranslate"><span class="pre">CryoGridCommunity_results/</span></code>) (Excel files, plots, MATLAB .mat summaries).</p></li>
+<li><p>Key : Dependencies (<code class="docutils literal notranslate"><span class="pre">run_program_parallel.m</span></code>), (<code class="docutils literal notranslate"><span class="pre">objectiveFcn_parallel.m</span></code>) and all helped functions in the folder.</p></li>
+<li><p>Notes: This is the only script you typically edit to configure a new simulation.</p></li>
+</ul>
+</section>
+<section id="workflow-functions-src-functions">
+<h2>Workflow Functions (src/functions)<a class="headerlink" href="#workflow-functions-src-functions" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Workflow Functions</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 40.0%" />
+<col style="width: 20.0%" />
+<col style="width: 20.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Function</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Key Inputs</p></th>
+<th class="head"><p>Key Outputs</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">run_program_parallel.m</span></code></p></td>
+<td><p>Supervises parallel worker execution, calls CryoGrid simulation, and collects results.</p></td>
+<td><p>Sensor ID, paths, parameters</p></td>
+<td><p>Results from each parallel simulation</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">find_measure_file.m</span></code></p></td>
+<td><p>Find the sensor’s CSV daily_mean file in the folder by the sensor’s ID.</p></td>
+<td><p>Sensor ID, daily_mean folder path</p></td>
+<td><p>Sensor’s measure file</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">get_sensor_info.m</span></code></p></td>
+<td><p>Function which recover the sensor data in the PAPPROG_data.xlsx file.</p></td>
+<td><p>Sensor ID, PAPROG Excel file</p></td>
+<td><p>Structured sensor data</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">find_forcing_file.m</span></code></p></td>
+<td><p>Find the sensor’s .mat forcing file in the folder by the sensor’s ID.</p></td>
+<td><p>Sensor ID, forcing data folder path</p></td>
+<td><p>Sensor’s forcing file</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">find_parameter_rows.m</span></code></p></td>
+<td><p>Find the parameter row in the CryoGrid Excel file.</p></td>
+<td><p>CryoGrid excel file, parameters name</p></td>
+<td><p>Parameters rows in the CryoGrid file</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">replace_parameters.m</span></code></p></td>
+<td><p>Replace the new parameter value in the CryoGrid Excel file.</p></td>
+<td><p>Parameters row</p></td>
+<td><p>Updated CryoGrid Excel file</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">replace_initial_temp.m</span></code></p></td>
+<td><p>Replace only the initial temperature value un the CryoGrid Excel file, because it’s different that other parameters.</p></td>
+<td><p>Intial temperature first row</p></td>
+<td><p>Updated CryoGrid Excel file</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">detect_snow_presence.m</span></code></p></td>
+<td><p>Detects snow cover periods from daily temperature measurements.</p></td>
+<td><p>CSV file (daily temps)</p></td>
+<td><p>Snow cover periods (indices, plots)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">analyze_bayesopt_optimization.m</span></code></p></td>
+<td><p>Create the basics optimization performance plot.</p></td>
+<td><p>Bayesian optimization results</p></td>
+<td><p>Basic optimization performance plot</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">merge_bayesopt_results.m</span></code></p></td>
+<td><p>Merge all the optimization workers results files.</p></td>
+<td><p>PResults folder</p></td>
+<td><p>Complete optimization result file</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">objectiveFcn_parallel.m</span></code></p></td>
+<td><p>Objective function used by Bayesian optimization (<code class="docutils literal notranslate"><span class="pre">bayesopt</span></code>).</p></td>
+<td><p>Parameters (albedo, z0, snow_fraction)</p></td>
+<td><p>Simulation score</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">run_CG_from_excel.m</span></code></p></td>
+<td><p>Function that allow to launch CryoGrid script in a loop.</p></td>
+<td><p>Excel metadata, sensor ID</p></td>
+<td><p>CryoGrid results</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">extract_mean_temperature.m</span></code></p></td>
+<td><p>Function which extract the simulated CryoGrid temperature results at the sensor depth.</p></td>
+<td><p>CryoGrid result file, sensor depth, altitude</p></td>
+<td><p>Simulated temperature and date vector</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">extract_excel_temperature.m</span></code></p></td>
+<td><p>Extract sensor measure dates and temperature values.</p></td>
+<td><p>CSV file (daily temps)</p></td>
+<td><p>Sensor observed dates and temperature</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">average_temperature_over_years.m</span></code></p></td>
+<td><p>Calculates the difference mean temperature by each year mean (Avoids bias if it miss a season in the measure.</p></td>
+<td><p>Simulated and observed temperature vectors</p></td>
+<td><p>Mean difference temperature</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">synchronize_data.m</span></code></p></td>
+<td><p>Truncates the observed and simulated data to the same size.</p></td>
+<td><p>Simulated and observed date and temp vectors</p></td>
+<td><p>Simulated and observed date and temp vector with the same size</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">score_model_seasonal.m</span></code></p></td>
+<td><p>Calculates seasonal performance metrics (RMSE, bias, seasonal fit, etc …).</p></td>
+<td><p>Simulated and observed temperature vectors</p></td>
+<td><p>Score, all global and seasonal statistics indicators per season</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">score_model.m</span></code></p></td>
+<td><p>Calculates a performance model score by key statistics indicators values.</p></td>
+<td><p>Stats and trends from following functions</p></td>
+<td><p>Performance score and key statistics indicators values</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evaluate_model.m</span></code></p></td>
+<td><p>Calculates the key statistics indicators values (RMSE, Bias, R2…).</p></td>
+<td><p>Simulated and observed temperature vectors</p></td>
+<td><p>Structured key statistics indicators values</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">compare_trends.m</span></code></p></td>
+<td><p>Calcules the key trends indicators values (slope, Sperman correlation, …).</p></td>
+<td><p>Simulated and observed temperature vectors</p></td>
+<td><p>Structured key trend indicators values</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evaluate_post_snow.m</span></code></p></td>
+<td><p>Calculates the model performance during the five days after the snow periods.</p></td>
+<td><p>Snow periods</p></td>
+<td><p>Model performance score after snow period</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">evaluate_during_snow.m</span></code></p></td>
+<td><p>Calculates the model performance during the snow periods.</p></td>
+<td><p>Snow periods</p></td>
+<td><p>Model performance score during snow period</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">extract_air_temperature.m</span></code></p></td>
+<td><p>extracts air temperature from forcing file. It allows to updated the initial temperature profil</p></td>
+<td><p>Forcing file</p></td>
+<td><p>Air temperature vector from forcing file</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="optimization-logic">
+<h2>Optimization Logic<a class="headerlink" href="#optimization-logic" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id2">
+<caption><span class="caption-text">Core Components</span><a class="headerlink" href="#id2" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 80.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Component</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Bayesian Optimization</strong></p></td>
+<td><p>Global parameter search using <code class="docutils literal notranslate"><span class="pre">bayesopt</span></code>. Optimizes <code class="docutils literal notranslate"><span class="pre">albedo</span></code>, <code class="docutils literal notranslate"><span class="pre">z0</span></code>, <code class="docutils literal notranslate"><span class="pre">snow_fraction</span></code>. It based on the Bayesian method, and the searching parameters distribution is uniform.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Parallelization</strong></p></td>
+<td><p>MATLAB Parallel Computing Toolbox used to run simulations concurrently.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Lock Mechanism</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.lock</span></code> files created in temp folders to avoid race conditions. There is a lock file to register each iteration number and score.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="cryogrid-modules-cryogrid">
+<h2>CryoGrid Modules (CryoGrid/)<a class="headerlink" href="#cryogrid-modules-cryogrid" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-text">CryoGrid Modules</span><a class="headerlink" href="#id3" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Folder</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CryoGridCommunity_source/</span></code></p></td>
+<td><p>Core CryoGrid model source docs ans script.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CryoGridCommunity_results/</span></code></p></td>
+<td><p>Output directory containing simulation results, plots, and Excel summaries.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CG_single.xlsx</span></code></p></td>
+<td><p>CryoGrid input Excel file updated dynamically by scripts.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CONSTANTS_excel.xlsx</span></code></p></td>
+<td><p>Stores default physical constants and parameter ranges.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="data-structure">
+<h2>Data Structure<a class="headerlink" href="#data-structure" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id4">
+<caption><span class="caption-text">Data Structure</span><a class="headerlink" href="#id4" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Folder</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data/Daily_mean/</span></code></p></td>
+<td><p>Contains daily temperature CSV files.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data/PAPROG_Data_set.xlsx</span></code></p></td>
+<td><p>Excel file with sensor metadata (altitude, slope, massif ID, etc.).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">forcing/Forcing_Data/</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.mat</span></code> files containing CryoGrid forcing (precipitation, temperature, etc.).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="temperature-profile-initialization-logic">
+<h2>Temperature profile initialization logic<a class="headerlink" href="#temperature-profile-initialization-logic" title="Link to this heading"></a></h2>
+<p>In the <code class="docutils literal notranslate"><span class="pre">CG_single.xlsx</span></code> file, you have to put an initial temperature profile that is the supposed
+existing temperature column at the near-surface measurement site and that is therefore the inherited
+ground temperature conditions.</p>
+<figure class="align-center" id="initial-temp-profile">
+<a class="reference internal image-reference" href="_images/initial_temperature_profil.png"><img alt="_images/initial_temperature_profil.png" src="_images/initial_temperature_profil.png" style="width: 600px;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Visualization of ‘CG_single.xlsx’ part with the initial temperature profil</span><a class="headerlink" href="#initial-temp-profile" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>In this optimization logic, it is first initialize at 0°C. We then try to assume the inherited temperature
+profile. All layers are initialized at the same temperature for simplicity, and because these are
+near-surface sensors, the programme focuses solely on near-surface temperature. To do so, every time there is a better
+simulation (a better score), this profile <code class="docutils literal notranslate"><span class="pre">T_ini</span></code> is updated with this logic :</p>
+<ul class="simple">
+<li><p>calculation of <code class="docutils literal notranslate"><span class="pre">T_mean_ref</span></code> : the forcing data mean air temperature at the sensor location between
+1991, January 1st and 2020, December 31th that is supposed to be representative of the climate
+condition at the measurement site</p></li>
+<li><p>calculation of <code class="docutils literal notranslate"><span class="pre">T_mean_sensor</span></code> : the forcing data mean annual air temperature between the first day of
+the measurement time serie and the 365th day of the time serie and that is representative of the
+climate during the measurement period</p></li>
+<li><p>calculation of <code class="docutils literal notranslate"><span class="pre">T_mean_cryo</span></code> : the mean annual near-surface temperature simulated with CryoGrid
+between the first and the 365th day of the simulated time serie</p></li>
+</ul>
+<p>–&gt; The new initial temperature profile is : <code class="docutils literal notranslate"><span class="pre">T_ini</span> <span class="pre">=</span> <span class="pre">T_mean_cryo</span> <span class="pre">-</span> <span class="pre">abs(T_mean_sensor</span> <span class="pre">-</span> <span class="pre">T_mean_ref)</span></code></p>
+</section>
+<section id="score-logic">
+<h2>Score logic<a class="headerlink" href="#score-logic" title="Link to this heading"></a></h2>
+<p>To the oprimization be performant, the objective function have to score the simulation performance
+compared to the reference sensor temperature measures.</p>
+<p>The score is build like this :</p>
+<ul class="simple">
+<li><p>10 points based on the RMSE value</p></li>
+<li><p>20 points based on the MAE value</p></li>
+<li><p>20 points based on BIAS value</p></li>
+<li><p>20 points based on R^2 value</p></li>
+<li><p>10 points based on mean difference temperature value</p></li>
+<li><p>10 points based on slope difference value</p></li>
+<li><p>10 points based on Spearman’s rho value</p></li>
+<li><p>10 points based on Directional agreement value</p></li>
+</ul>
+<p>Total score on 110 points, normalized to 100 points.</p>
+<p>This evaluation is done for all the season, and the final score is a ponderation of the each season
+score based on the season weights.</p>
+<p>If you want to modify the score repartition, you have to do it in the <code class="docutils literal notranslate"><span class="pre">score_model.m</span></code> function. The season
+weights are defined in the initial configuration on the main script.</p>
+</section>
+<section id="extending-the-code">
+<h2>Extending the Code<a class="headerlink" href="#extending-the-code" title="Link to this heading"></a></h2>
+<section id="adding-a-new-sensor">
+<h3>Adding a New Sensor<a class="headerlink" href="#adding-a-new-sensor" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Add the new daily CSV file to (<code class="docutils literal notranslate"><span class="pre">data/Daily_mean/</span></code>).</p></li>
+<li><p>Add metadata line to (<code class="docutils literal notranslate"><span class="pre">PAPROG_Data_set.xlsx</span></code>), with a new sensor ID.</p></li>
+<li><p>Generate a forcing .mat file and place it in (<code class="docutils literal notranslate"><span class="pre">forcing/Forcing_Data/</span></code>).</p></li>
+<li><p>Update informations in (<code class="docutils literal notranslate"><span class="pre">main_optimization_parallel</span></code>).</p></li>
+</ol>
+</section>
+<section id="adding-a-new-parameter-to-optimize">
+<h3>Adding a New Parameter to Optimize<a class="headerlink" href="#adding-a-new-parameter-to-optimize" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Adapte the parameter updating. Search where this parameter is between the (<code class="docutils literal notranslate"><span class="pre">CG_single.xlsx</span></code>) or (<code class="docutils literal notranslate"><span class="pre">CONSTANTS_excel.xlsx</span></code>)
+files. It’s important to know in which file this parameter is. First because the actual optimized parameters
+are all in the (<code class="docutils literal notranslate"><span class="pre">CG_single.xlsx</span></code>), so the (<code class="docutils literal notranslate"><span class="pre">find_parameter_rows</span></code>) adn (<code class="docutils literal notranslate"><span class="pre">replace_parameters</span></code>) functions take
+(<code class="docutils literal notranslate"><span class="pre">CG_single.xlsx</span></code>) in argument and search in this file. If your new parameter is in the (<code class="docutils literal notranslate"><span class="pre">CONSTANTS_excel.xlsx</span></code>)
+file, you should add a step in (<code class="docutils literal notranslate"><span class="pre">run_program_parallel</span></code>) with the seraching functions with this new argument.
+Second, the parameter remplacement is made by dettecting the line with the parameter name, and change the
+value in the same line in the next column. But if the configuration is different you should modifiy or create
+a special function.</p></li>
+<li><p>Update Bayesian optimization variable definitions in the main.</p></li>
+</ol>
+</section>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.mathworks.com/help/matlab/">MATLAB Documentation</a></p></li>
+<li><p><a class="reference external" href="https://cryogrid-documentation.readthedocs.io/en/latest/">CryoGrid Community</a></p></li>
+<li><p><a class="reference external" href="https://fr.mathworks.com/help/stats/bayesian-optimization-algorithm.html">Bayesian Optimization in MATLAB</a></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="configuration.html" class="btn btn-neutral float-left" title="Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="Troubleshooting &amp; Common Errors" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Fribault.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
