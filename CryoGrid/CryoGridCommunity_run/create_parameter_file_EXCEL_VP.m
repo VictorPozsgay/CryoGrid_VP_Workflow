@@ -26,18 +26,21 @@ copyfile('templates/CONSTANTS_excel.xlsx', [param_file_path run_name]);
 % option = {''; 'new_init'; 'update_forcing_out';  ''; ''; ''; ''; ''; ''; ''; ''; '';'';};
 
 %
-class_name = {'RUN_1D_POINT_SPINUP'; 'POINT_SLOPE'};
-class_number = [1; 1];
-option = {'POINT_SLOPE'; ''};
+class_name = {'RUN_1D_POINT_SPINUP'; 'POINT_SLOPE'; 'TILE_1D_standard2'; 'TILE_1D_standard2'; 'TILE_1D_standard2';
+    'FORCING_seb_mat'; 'OUT_do_nothing'; 'OUT_last_timestep'; 'OUT_last_timestep'};
+class_number = [1; 1; 1; 2; 3;
+    1; 1; 1; 2];
+option = {''; ''; 'new_init'; 'restart_OUT_last_timestep'; 'update_forcing_out';
+    ''; ''; ''; ''};
 
 % % accelerated spin-up
-% class_name = {'RUN_1D_SPINUP'; 'TILE_1D_standard'; 'TILE_1D_standard';'TILE_1D_standard';'TILE_1D_standard'; 'FORCING_seb'; 'FORCING_seb'; 'INIT_TTOP_from_out'; 'INIT_TTOP_from_forcing'; ...
+% class_name = {'RUN_1D_POINT_SPINUP'; 'TILE_1D_standard'; 'TILE_1D_standard';'TILE_1D_standard';'TILE_1D_standard'; 'FORCING_seb'; 'FORCING_seb'; 'INIT_TTOP_from_out'; 'INIT_TTOP_from_forcing'; ...
 %     'OUT_FDD_TDD'; 'OUT_do_nothing'; 'OUT_all_lateral'; 'GRID_user_defined'; 'STRAT_classes'; 'STRAT_layers'; ...
 %     'GROUND_freeW_bucketW_seb_snow'; 'GROUND_freeW_seb'; 'SNOW_simple_bucketW_seb'; 'LATERAL_1D'; 'LAT_SEEPAGE_FACE_WATER'; 'LAT_WATER_RESERVOIR'; 'LAT_OVERLAND_FLOW'};
 % class_number = [1; 1; 2; 3; 4; 1; 2; 1; 1; 1: 1; 1: 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1];
 % option = {''; 'new_init_steady_state'; 'update_forcing_out'; 'new_init_steady_state'; 'update_forcing_out'; ''; ''; ''; ''; ''; ''; ''; ''; ''; ''; ''; '';'';'';''; ''; ''};
 
-assign_default = 0; %1: enter default values where available; 0: do not enter default values 
+assign_default = 1; %1: enter default values where available; 0: do not enter default values 
 
 % end user-modified part
 %------------------------
