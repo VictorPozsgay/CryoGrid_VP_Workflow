@@ -149,47 +149,71 @@ rowIdx = rowIdx(1);
 
 end
 
-function sheet = replace_val_hlist(sheet, rowIdx, param, valLoopInit, options)
+% function sheet = replace_val_hlist(sheet, rowIdx, param, valLoopInit, options)
+% 
+% arguments
+%     sheet
+%     rowIdx
+%     param
+%     valLoopInit
+% 
+%     options.numLoops = 1
+%     options.valLoopNext = ""
+%     options.hlist = false
+% end
+% 
+% numLoops = options.numLoops;
+% valLoopNext = options.valLoopNext;
+% hlist = options.hlist;
+% 
+% if (numLoops == 1) && ~hlist
+%     vecTile = {param, valLoopInit};
+% else
+%     vecTile = {param, "H_LIST", valLoopInit};
+% end
+% 
+% for n=1:numLoops-1
+%     if strcmp(valLoopNext, 'increasing')
+%         vecTile = [vecTile, {valLoopInit+2*n-1, valLoopInit+2*n}];
+%     elseif strcmp(valLoopNext, 'equal')
+%         vecTile = [vecTile, {valLoopInit, valLoopInit}];
+%     else
+%         vecTile = [vecTile, valLoopNext];
+%     end
+% end
+% 
+% if (numLoops > 1) || hlist
+%     vecTile = [vecTile, {"END"}];
+% end
+% 
+% % CAREFUL: make sure the table is wide enough!!!
+% sheet(:, end+1:numel(vecTile)) = repmat({""}, size(sheet,1), ...
+%     numel(vecTile)-size(sheet,2));
+% sheet(rowIdx, 1:(numel(vecTile))) = vecTile;
+% 
+% end
+
+function sheet = replace_val_hlist(sheet, rowIdx, param, value)
 
 arguments
     sheet
     rowIdx
     param
-    valLoopInit
-
-    options.numLoops = 1
-    options.valLoopNext = ""
-    options.hlist = false
+    value
 end
 
-numLoops = options.numLoops;
-valLoopNext = options.valLoopNext;
-hlist = options.hlist;
+vec = {param};
 
-if (numLoops == 1) && ~hlist
-    vecTile = {param, valLoopInit};
+if iscell(value)
+    vec = [vec, {"H_LIST"}, value, {"END"}];
 else
-    vecTile = {param, "H_LIST", valLoopInit};
-end
-
-for n=1:numLoops-1
-    if strcmp(valLoopNext, 'increasing')
-        vecTile = [vecTile, {valLoopInit+2*n-1, valLoopInit+2*n}];
-    elseif strcmp(valLoopNext, 'equal')
-        vecTile = [vecTile, {valLoopInit, valLoopInit}];
-    else
-        vecTile = [vecTile, valLoopNext];
-    end
-end
-
-if (numLoops > 1) || hlist
-    vecTile = [vecTile, {"END"}];
+    vec = [vec, {value}];
 end
 
 % CAREFUL: make sure the table is wide enough!!!
-sheet(:, end+1:numel(vecTile)) = repmat({""}, size(sheet,1), ...
-    numel(vecTile)-size(sheet,2));
-sheet(rowIdx, 1:(numel(vecTile))) = vecTile;
+sheet(:, end+1:numel(vec)) = repmat({""}, size(sheet,1), ...
+    numel(vec)-size(sheet,2));
+sheet(rowIdx, 1:(numel(vec))) = vec;
 
 end
 
@@ -237,12 +261,47 @@ next = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
 [blocksInit, TInit] = cut_into_blocks(init);
 [blocksNext, TNext] = cut_into_blocks(next);
 
+% Maximum width across all blocks
+maxCols = max([ ...
+    cellfun(@(x) size(x,2), blocksInit), ...
+    cellfun(@(x) size(x,2), blocksNext), ...
+    cellfun(@(x) size(x,2), blocksNew) ]);
+
+padBlock = @(B) padBlockFcn(B, maxCols);
+
+blocksInit = cellfun(padBlock, blocksInit, 'UniformOutput', false);
+blocksNext = cellfun(padBlock, blocksNext, 'UniformOutput', false);
+blocksNew  = cellfun(padBlock, blocksNew,  'UniformOutput', false);
+
+function B = padBlockFcn(B, maxCols)
+
+    % Pad columns
+    B = [B, repmat({""}, size(B,1), maxCols-size(B,2))];
+
+    % Count trailing rows that are entirely ""
+    trailingEmpty = 0;
+
+    for r = size(B,1):-1:1
+        if all(string(B(r,:)) == "")
+            trailingEmpty = trailingEmpty + 1;
+        else
+            break
+        end
+    end
+
+    % Ensure at least 2 trailing empty rows
+    if trailingEmpty < 2
+        B = [B;
+             repmat({""}, 2-trailingEmpty, maxCols)];
+    end
+
+end
+
 % for i = 1:size(TNew,1)
 for i = 1:size(TNew,1)
     rowA = TNew(i,:);
     [tfInit, idxInit] = ismember(rowA, TInit, 'rows');
     [tfNext, idxNext] = ismember(rowA, TNext, 'rows');
-    disp([i idxInit idxNext])
     if strcmp(rowA.cls, "STRAT_linear")
         if tfInit
             blocksInit{idxInit} = blocksNew{i};
@@ -254,16 +313,16 @@ for i = 1:size(TNew,1)
             row = blocksNew{i}(j,:);
             strt = string(row(1));
             if ~strcmp(strt,"")
-                disp(strt)
+                % disp(strt)
                 if tfInit
                     matchIdx = find(strcmp(string(blocksInit{idxInit}(:,1)), strt));
-                    disp(matchIdx)
+                    % disp(matchIdx)
                     for m=1:numel(matchIdx)
                         blocksInit{idxInit}(matchIdx(m),1:numel(row)) = row;
                     end
                 elseif tfNext
                     matchIdx = find(strcmp(string(blocksNext{idxNext}(:,1)), strt));
-                    disp(matchIdx)
+                    % disp(matchIdx)
                     for m=1:numel(matchIdx)
                         blocksNext{idxNext}(matchIdx(m),1:numel(row)) = row;
                     end
@@ -273,188 +332,137 @@ for i = 1:size(TNew,1)
     end
 end
 
+nInit = size(TInit,1);
+nNext = size(TNext,1);
+nAll  = nInit + (numLoops-1)*nNext;
 
+TAll = TInit;
+blocksAll = blocksInit;
 
+for n = 2:numLoops
+    TNextTemp = TNext;
+    blocksNextTemp = blocksNext;
 
+    % First TILE with restart_OUT_last_timestep
 
-% sheets = cell(numLoops,1);
-% sheets{1} = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
-% for n=2:numLoops
-%     sheets{n} = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
-% end
-% 
-% if 2*numLoops+2>size(sheets{1},2)
-%     sheets{1} = [sheets{1}, repmat({""}, size(sheets{1},1), ...
-%         2*numLoops+2-size(sheets{1},2))];
-% end
-% 
-% % Find max number of columns
-% maxCols = max(cellfun(@(x) size(x,2), sheets));
-% 
-% % Pad each sheet to same width (cellfun)
-% sheets = cellfun(@(x) ...
-%     [x, repmat({""}, size(x,1), maxCols - size(x,2))], ...
-%     sheets, 'UniformOutput', false);
-% 
-% % find row where first column is "tile_class"
-% % col1 = strtrim(string(sheets{1}(:,1)));
-% % rowIdx = find(col1 == "tile_class");
-% rowIdx = identifying_line_to_change(sheets{1}, "RUN_1D_POINT_SPINUP", ...
-%     1, "tile_class");
-% sheets{1} = replace_val_hlist(sheets{1}, rowIdx, "tile_class", ...
-%     "TILE_1D", numLoops=numLoops, valLoopNext={"TILE_1D", "TILE_1D"});
-% 
-% rowIdx = identifying_line_to_change(sheets{1}, "RUN_1D_POINT_SPINUP", ...
-%     1, "tile_class_index");
-% sheets{1} = replace_val_hlist(sheets{1}, rowIdx, "tile_class_index", ...
-%     1, numLoops=numLoops, valLoopNext="increasing");
-% 
-% rowIdx = identifying_line_to_change(sheets{1}, "RUN_1D_POINT_SPINUP", ...
-%     1, "number_of_runs_per_tile");
-% sheets{1} = replace_val_hlist(sheets{1}, rowIdx, ...
-%     "number_of_runs_per_tile", 1, numLoops=numLoops, valLoopNext="equal");
-% 
-% 
-% for n=2:numLoops
-%     rowIdx = identifying_line_to_change(sheets{n}, "TILE_1D", ...
-%         2, "TILE_1D");
-%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
-%         "TILE_1D", 2*n-2);
-% 
-%     rowIdx = identifying_line_to_change(sheets{n}, "TILE_1D", ...
-%         3, "TILE_1D");
-%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
-%         "TILE_1D", 2*n-1);
-% 
-%     rowIdx = identifying_line_to_change(sheets{n}, "TILE_1D", ...
-%         2*n-2, "restart_file_name");
-%     val = string(folder_name) + "_loop" + string(n-1) + "_last_timestep";
-%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
-%         "restart_file_name", val);
-% 
-%     rowIdx = identifying_line_to_change(sheets{n}, "TILE_1D", ...
-%         2*n-1, "out_class_index");
-%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
-%         "out_class_index", n, hlist=true);
-% 
-%     rowIdx = identifying_line_to_change(sheets{n}, "OUT_last_timestep", ...
-%         2, "OUT_last_timestep");
-%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
-%         "OUT_last_timestep", n);
-% 
-%     rowIdx = identifying_line_to_change(sheets{n}, "OUT_last_timestep", ...
-%         n, "tag");
-%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
-%         "tag", "loop" + string(n));
-% end
-% 
-% 
-% % Find max number of columns
-% maxCols = max(cellfun(@(x) size(x,2), sheets));
-% 
-% % Pad each sheet to same width (cellfun)
-% sheets = cellfun(@(x) ...
-%     [x, repmat({""}, size(x,1), maxCols - size(x,2))], ...
-%     sheets, 'UniformOutput', false);
-% 
-% % append 2 empty rows
-% for n=1:numLoops
-%     sheets{n} = [sheets{n}; repmat({""}, 2, maxCols)];
-% end
-% 
-% % Concatenate vertically
-% result = cat(1, sheets{:});
-% 
-% 
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% [blocks, T] = cut_into_blocks(result);
-% 
-% % sepIdx = find(startsWith(strtrim(string(result(:,1))), "-"));
-% % sepIdx = [sepIdx; size(result,1)+1];
-% % 
-% % nBlocks = numel(sepIdx)-1;
-% % blocks = cell(1,nBlocks);
-% % 
-% % for i = 1:nBlocks
-% %     blocks{i} = result(sepIdx(i):sepIdx(i+1)-1, :);    
-% %     if ~startsWith(strtrim(string(blocks{i}(1,1))), "-")
-% %         disp('Issue with block, not starting with "-"')
-% %     end    
-% % end
-% % 
-% % sup = strings(nBlocks,1);
-% % cls = strings(nBlocks,1);
-% % idx = zeros(nBlocks,1);
-% % 
-% % for i = 1:nBlocks
-% %     sup(i) = string(blocks{i}{2,1});
-% %     cls(i) = string(blocks{i}{3,1});
-% %     idx(i) = blocks{i}{3,2};
-% % end
-% % 
-% % T = table(sup, cls, idx);
-% supOrder = ["RUN_INFO"; "POINT"; "TILE"; "FORCING"; "OUT"; "GRID";
-%     "STRATIGRAPHY_CLASSES"; "STRATIGRAPHY_STATVAR"; "GROUND"; "SNOW";
-%     "LATERAL"; "LATERAL_IA"];
-% [~, T.supRank] = ismember(T.sup, supOrder); 
-% T.supRank(T.supRank == 0) = inf;
-% T.blocks = blocks(:);
-% T = sortrows(T, {'supRank','idx'});
-% 
-% blocks(:) = T.blocks;
-% 
-% % Concatenate vertically
-% result = cat(1, blocks{:});
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% % Write to Excel
-% path_out = join_rel_path(result_path,folder_name,'.xlsx');
-% if isfile(path_out)
-%     try
-%         delete(path_out);
-%     catch
-%         warning("Could not delete file: %s", path_out);
-%     end
-% end
-% 
-% writecell(result, path_out)
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% % Pad each sheet to same width (cellfun)
-% newParams = [newParams, repmat({""}, size(newParams,1), ...
-%     maxCols - size(newParams,2))];
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-% [blocksNew, TNew] = cut_into_blocks(newParams);
-% 
-% % sepIdx = find(startsWith(strtrim(string(newParams(:,1))), "-"));
-% % sepIdx = [sepIdx; size(newParams,1)+1];
-% % 
-% % nBlocks = numel(sepIdx)-1;
-% % blocksNew = cell(1,nBlocks);
-% % 
-% % for i = 1:nBlocks
-% %     blocksNew{i} = newParams(sepIdx(i):sepIdx(i+1)-1, :);    
-% %     if ~startsWith(strtrim(string(blocksNew{i}(1,1))), "-")
-% %         disp('Issue with block, not starting with "-"')
-% %     end    
-% % end
-% % 
-% % sup = strings(nBlocks,1);
-% % cls = strings(nBlocks,1);
-% % idx = zeros(nBlocks,1);
-% % 
-% % for i = 1:nBlocks
-% %     sup(i) = string(blocksNew{i}{2,1});
-% %     cls(i) = string(blocksNew{i}{3,1});
-% %     idx(i) = blocksNew{i}{3,2};
-% % end
-% % 
-% % TNew = table(sup, cls, idx);
-% 
-% % clearvars;
+    mask = (TNextTemp.sup == "TILE") & ...
+        (TNextTemp.cls == "TILE_1D") & ...
+        (TNextTemp.idx == 2);
+
+    TNextTemp.idx(mask) = 2*n-2;
+
+    rowIdx = identifying_line_to_change(blocksNext{1,1}, "TILE_1D", ...
+        2, "TILE_1D");
+    blocksNextTemp{1,1} = replace_val_hlist(blocksNextTemp{1,1}, ...
+        rowIdx, "TILE_1D", 2*n-2);
+
+    rowIdx = identifying_line_to_change(blocksNext{1,1}, "TILE_1D", ...
+        2, "restart_file_name");
+    val = string(folder_name) + "_loop" + string(n-1) + "_last_timestep";
+    blocksNextTemp{1,1} = replace_val_hlist(blocksNextTemp{1,1}, ...
+        rowIdx, "restart_file_name", val);
+
+    % Second TILE with update_forcing_out
+
+    mask = (TNextTemp.sup == "TILE") & ...
+        (TNextTemp.cls == "TILE_1D") & ...
+        (TNextTemp.idx == 3);
+
+    TNextTemp.idx(mask) = 2*n-1;
+
+    rowIdx = identifying_line_to_change(blocksNext{1,2}, "TILE_1D", ...
+        3, "TILE_1D");
+    blocksNextTemp{1,2} = replace_val_hlist(blocksNextTemp{1,2}, ...
+        rowIdx, "TILE_1D", 2*n-1);
+
+    rowIdx = identifying_line_to_change(blocksNext{1,2}, "TILE_1D", ...
+        3, "out_class_index");
+    blocksNextTemp{1,2} = replace_val_hlist(blocksNextTemp{1,2}, ...
+        rowIdx, "out_class_index", {n});
+
+    % Third TILE with OUT_last_timestep
+
+    mask = (TNextTemp.sup == "OUT") & ...
+        (TNextTemp.cls == "OUT_last_timestep") & ...
+        (TNextTemp.idx == 2);
+
+    TNextTemp.idx(mask) = n;
+
+    rowIdx = identifying_line_to_change(blocksNext{1,3}, ...
+        "OUT_last_timestep", 2, "OUT_last_timestep");
+    blocksNextTemp{1,3} = replace_val_hlist(blocksNextTemp{1,3}, ...
+        rowIdx, "OUT_last_timestep", n);
+
+    rowIdx = identifying_line_to_change(blocksNext{1,3}, ...
+        "OUT_last_timestep", 2, "tag");
+    blocksNextTemp{1,3} = replace_val_hlist(blocksNextTemp{1,3}, ...
+        rowIdx, "tag", "loop" + string(n));
+
+    % Concatenate
+
+    TAll = vertcat(TAll, TNextTemp);
+    blocksAll = horzcat(blocksAll, blocksNextTemp);
+end
+
+supOrder = ["RUN_INFO"; "POINT"; "TILE"; "FORCING"; "OUT"; "GRID";
+    "STRATIGRAPHY_CLASSES"; "STRATIGRAPHY_STATVAR"; "GROUND"; "SNOW";
+    "LATERAL"; "LATERAL_IA"];
+[~, TAll.supRank] = ismember(TAll.sup, supOrder); 
+TAll.supRank(TAll.supRank == 0) = inf;
+TAll.blocks = blocksAll(:);
+TAll = sortrows(TAll, {'supRank','idx'});
+
+blocksAll(:) = TAll.blocks;
+
+% Concatenate vertically
+result = cat(1, blocksAll{:});
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function tf = compareBlocks(blocksInit, blocksCheck)
+
+tf = true;
+
+% 1. same number of blocks
+if numel(blocksInit) ~= numel(blocksCheck)
+    tf = false;
+    return;
+end
+
+% 2. compare each block
+for i = 1:numel(blocksInit)
+
+    A = string(blocksInit{i});
+    B = string(blocksCheck{i});
+
+    if ~isequal(size(A), size(B))
+        tf = false;
+        return;
+    end
+
+    if ~all(A == B, 'all')
+        tf = false;
+        return;
+    end
+
+end
+
+end
+
+[blocksCheck, TCheck] = cut_into_blocks(result);
+tfa = all(all(TAll{:,1:3} == TCheck{:,:}));
+tfb = compareBlocks(blocksAll, blocksCheck);
+
+if ~tfa
+    disp("Something went wrong with the ordering")
+else
+    disp("All good with the ordering")
+end
+
+if ~tfb
+    disp("Something went wrong with the blocks")
+else
+    disp("All good with the blocks")
+end
+
+% clearvars;
