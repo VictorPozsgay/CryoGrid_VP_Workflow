@@ -4,13 +4,22 @@
 init_format = 'EXCEL3D'; % choose the option corresponding to the parameter file format
 ext_dict = dictionary('EXCEL3D','.xlsx');
 
-num_loops = 3;
+numLoops = 10;
 
 result_path = '..\CryoGridCommunity_results\templates\automatic_loops\';
 source_path = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
 % template_file = 'template_param_file'; %name of template parameter file
 % (without file extension) to modify
+
+result_path = join_rel_path(result_path);
+source_path = join_rel_path(source_path);
+
+
+
+modify.restart_file_path = result_path;
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%% end user-modified part %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,8 +46,9 @@ function p = join_rel_path(in,out,ext)
 %   in : char
 %       Input directory path.
 %
-%   out : char
+%   out : char, optional
 %       File or subdirectory name.
+%       Default: "".
 %
 %   ext : char, optional
 %       File extension to append to OUT.
@@ -52,7 +62,7 @@ function p = join_rel_path(in,out,ext)
 
 arguments
     in char
-    out char
+    out char = ""
     ext char = ""
 end
 
@@ -104,101 +114,111 @@ end
 
 end
 
-function S = identifying_lines_to_change(C,CB)
-%IDENTIFYING_LINES_TO_CHANGE Locate varying parameters in template data.
-%
-%   S = IDENTIFYING_LINES_TO_CHANGE(C, CB)
-%
-%   Parses varying parameter definitions and identifies the corresponding
-%   rows in the template spreadsheet where values must be modified.
-%
-%   Inputs
-%   ------
-%   C : cell array
-%       Parameter variation definition table.
-%
-%   CB : cell array
-%       Template spreadsheet cell array.
-%
-%   Output
-%   ------
-%   S : struct array
-%       Structure array containing:
-%
-%       class
-%           Parameter class/category.
-%
-%       index
-%           Parameter index identifier.
-%
-%       var
-%           Variable name.
-%
-%       idxRow
-%           Row index in CB where the parameter is located.
-%
-%       vecValues
-%           Vector of parameter values to vary.
-%
+function rowIdx = identifying_line_to_change(sheet, class, index, ...
+    string_to_find)
 
-N = size(C,1)-1;
+% Convert columns to strings
+col1 = strtrim(string(sheet(:,1)));
+col2 = strtrim(string(sheet(:,2)));
 
-S = struct( ...
-    'class',     cell(N,1), ...
-    'index',     cell(N,1), ...
-    'var',       cell(N,1), ...
-    'idxRow',    cell(N,1), ...
-    'vecValues', cell(N,1));
+% Find matching class/index row
+rowIdxClass = find((col1 == class) & (col2 == string(index)));
 
-for r = 2:size(C,1)
+% Ensure uniqueness
+if isempty(rowIdxClass)
+    error('No matching class/index row found.');
+elseif numel(rowIdxClass) > 1
+    error('Multiple matching class/index rows found.');
+end
 
-    class = C{r,1};
-    index = C{r,2};
-    var   = C{r,3};
-    row   = C(r,:);
+% Convert to scalar integer
+rowIdxClass = rowIdxClass(1);
 
-    S(r-1).class = class;
-    S(r-1).index = index;
-    S(r-1).var   = var;
+% Find all rows matching string_to_find
+rowIdxAll = find(col1 == string_to_find);
 
-    startIdx = find(strcmp(row, 'H_LIST'), 1, 'first');
-    endIdx   = find(strcmp(row, 'END'), 1, 'first');
+% Keep only rows AFTER rowIdxClass
+rowIdx = rowIdxAll(rowIdxAll >= rowIdxClass);
 
-    vec = row(startIdx+1:endIdx-1);
-    vec = cell2mat(vec);
+% Take first one
+if isempty(rowIdx)
+    error('No matching row found after class/index row.');
+end
 
-    S(r-1).vecValues = vec;
-
-    idxRow = (string(CB(:,1))==class) & ...
-             (string(CB(:,2))==string(index));
-
-    idxRow = find(idxRow);
-
-    foundRow = [];
-
-    for rr = idxRow:size(CB,1)
-
-        firstCell = CB{rr,1};
-
-        if ~ischar(firstCell) && ~isstring(firstCell)
-            continue
-        end
-
-        firstCell = char(firstCell);
-
-        if startsWith(firstCell, '---')
-            break
-        end
-
-        if strcmp(firstCell, var)
-            foundRow = rr;
-            break
-        end
-    end
-
-    S(r-1).idxRow = foundRow;
+rowIdx = rowIdx(1);
 
 end
+
+function sheet = replace_val_hlist(sheet, rowIdx, param, valLoopInit, options)
+
+arguments
+    sheet
+    rowIdx
+    param
+    valLoopInit
+
+    options.numLoops = 1
+    options.valLoopNext = ""
+    options.hlist = false
+end
+
+numLoops = options.numLoops;
+valLoopNext = options.valLoopNext;
+hlist = options.hlist;
+
+if (numLoops == 1) && ~hlist
+    vecTile = {param, valLoopInit};
+else
+    vecTile = {param, "H_LIST", valLoopInit};
+end
+
+for n=1:numLoops-1
+    if strcmp(valLoopNext, 'increasing')
+        vecTile = [vecTile, {valLoopInit+2*n-1, valLoopInit+2*n}];
+    elseif strcmp(valLoopNext, 'equal')
+        vecTile = [vecTile, {valLoopInit, valLoopInit}];
+    else
+        vecTile = [vecTile, valLoopNext];
+    end
+end
+
+if (numLoops > 1) || hlist
+    vecTile = [vecTile, {"END"}];
+end
+
+% CAREFUL: make sure the table is wide enough!!!
+sheet(:, end+1:numel(vecTile)) = repmat({""}, size(sheet,1), ...
+    numel(vecTile)-size(sheet,2));
+sheet(rowIdx, 1:(numel(vecTile))) = vecTile;
+
+end
+
+function [blocks, T] = cut_into_blocks(data)
+
+sepIdx = find(startsWith(strtrim(string(data(:,1))), "-"));
+sepIdx = [sepIdx; size(data,1)+1];
+
+nBlocks = numel(sepIdx)-1;
+blocks = cell(1,nBlocks);
+
+for i = 1:nBlocks
+    blocks{i} = data(sepIdx(i):sepIdx(i+1)-1, :);    
+    if ~startsWith(strtrim(string(blocks{i}(1,1))), "-")
+        disp('Issue with block, not starting with "-"')
+    end    
+end
+
+sup = strings(nBlocks,1);
+cls = strings(nBlocks,1);
+idx = zeros(nBlocks,1);
+
+for i = 1:nBlocks
+    sup(i) = string(blocks{i}{2,1});
+    cls(i) = string(blocks{i}{3,1});
+    idx(i) = blocks{i}{3,2};
+end
+
+T = table(sup, cls, idx);
 
 end
 
@@ -206,72 +226,235 @@ end
 %                             code run
 % -------------------------------------------------------------------------
 
-sheets = cell(num_loops,1);
-sheets{1} = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
-for n=2:num_loops
-    sheets{n} = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
+[~, folder_name] = fileparts(join_rel_path(result_path));
+
+newParams = format_template(result_path,'NEW_PARAMS','.xlsx');
+
+init = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
+next = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
+
+[blocksNew, TNew] = cut_into_blocks(newParams);
+[blocksInit, TInit] = cut_into_blocks(init);
+[blocksNext, TNext] = cut_into_blocks(next);
+
+% for i = 1:size(TNew,1)
+for i = 1:size(TNew,1)
+    rowA = TNew(i,:);
+    [tfInit, idxInit] = ismember(rowA, TInit, 'rows');
+    [tfNext, idxNext] = ismember(rowA, TNext, 'rows');
+    disp([i idxInit idxNext])
+    if strcmp(rowA.cls, "STRAT_linear")
+        if tfInit
+            blocksInit{idxInit} = blocksNew{i};
+        elseif tfNext
+            blocksNext{idxNext} = blocksNew{i};
+        end
+    else
+        for j = 1:size(blocksNew{i},1)
+            row = blocksNew{i}(j,:);
+            strt = string(row(1));
+            if ~strcmp(strt,"")
+                disp(strt)
+                if tfInit
+                    matchIdx = find(strcmp(string(blocksInit{idxInit}(:,1)), strt));
+                    disp(matchIdx)
+                    for m=1:numel(matchIdx)
+                        blocksInit{idxInit}(matchIdx(m),1:numel(row)) = row;
+                    end
+                elseif tfNext
+                    matchIdx = find(strcmp(string(blocksNext{idxNext}(:,1)), strt));
+                    disp(matchIdx)
+                    for m=1:numel(matchIdx)
+                        blocksNext{idxNext}(matchIdx(m),1:numel(row)) = row;
+                    end
+                end
+            end
+        end
+    end
 end
 
-if 2*num_loops+2>size(sheets{1},2)
-    sheets{1} = [sheets{1}, repmat({""}, size(sheets{1},1), ...
-        2*num_loops+2-size(sheets{1},2))];
-end
-
-% Find max number of columns
-maxCols = max(cellfun(@(x) size(x,2), sheets));
-
-% Pad each sheet to same width (cellfun)
-sheets = cellfun(@(x) ...
-    [x, repmat({""}, size(x,1), maxCols - size(x,2))], ...
-    sheets, 'UniformOutput', false);
-
-% find row where first column is "tile_class"
-col1 = strtrim(string(sheets{1}(:,1)));
-rowIdx = find(col1 == "tile_class");
-
-vec_tile1 = {"tile_class", "H_LIST", "TILE_1D"};
-vec_tile2 = {"tile_class_index", "H_LIST", 1};
-vec_tile3 = {"number_of_runs_per_tile", "H_LIST", 1};
-for n=1:num_loops-1
-    vec_tile1 = [vec_tile1, {"TILE_1D", "TILE_1D"}];
-    vec_tile2 = [vec_tile2, {2*n, 2*n+1}];
-    vec_tile3 = [vec_tile3, {1, 1}];
-end
-vec_tile1 = [vec_tile1, {"END"}];
-vec_tile2 = [vec_tile2, {"END"}];
-vec_tile3 = [vec_tile3, {"END"}];
-
-% modify column 3 in that row
-sheets{1}(rowIdx, 1:(numel(vec_tile1))) = vec_tile1;
-sheets{1}(rowIdx+1, 1:(numel(vec_tile2))) = vec_tile2;
-sheets{1}(rowIdx+2, 1:(numel(vec_tile3))) = vec_tile3;
 
 
 
 
-
-
-
-
-
-
-% Find max number of columns
-maxCols = max(cellfun(@(x) size(x,2), sheets));
-
-% Pad each sheet to same width (cellfun)
-sheets = cellfun(@(x) ...
-    [x, repmat({""}, size(x,1), maxCols - size(x,2))], ...
-    sheets, 'UniformOutput', false);
-
-% append 2 empty rows
-for n=1:num_loops
-    sheets{n} = [sheets{n}; repmat({""}, 2, maxCols)];
-end
-
-% Concatenate vertically
-result = cat(1, sheets{:});
-
-% Write to Excel
-writecell(result, join_rel_path(result_path,'automatic_loops','.xlsx'));
-
-% clearvars;
+% sheets = cell(numLoops,1);
+% sheets{1} = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
+% for n=2:numLoops
+%     sheets{n} = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
+% end
+% 
+% if 2*numLoops+2>size(sheets{1},2)
+%     sheets{1} = [sheets{1}, repmat({""}, size(sheets{1},1), ...
+%         2*numLoops+2-size(sheets{1},2))];
+% end
+% 
+% % Find max number of columns
+% maxCols = max(cellfun(@(x) size(x,2), sheets));
+% 
+% % Pad each sheet to same width (cellfun)
+% sheets = cellfun(@(x) ...
+%     [x, repmat({""}, size(x,1), maxCols - size(x,2))], ...
+%     sheets, 'UniformOutput', false);
+% 
+% % find row where first column is "tile_class"
+% % col1 = strtrim(string(sheets{1}(:,1)));
+% % rowIdx = find(col1 == "tile_class");
+% rowIdx = identifying_line_to_change(sheets{1}, "RUN_1D_POINT_SPINUP", ...
+%     1, "tile_class");
+% sheets{1} = replace_val_hlist(sheets{1}, rowIdx, "tile_class", ...
+%     "TILE_1D", numLoops=numLoops, valLoopNext={"TILE_1D", "TILE_1D"});
+% 
+% rowIdx = identifying_line_to_change(sheets{1}, "RUN_1D_POINT_SPINUP", ...
+%     1, "tile_class_index");
+% sheets{1} = replace_val_hlist(sheets{1}, rowIdx, "tile_class_index", ...
+%     1, numLoops=numLoops, valLoopNext="increasing");
+% 
+% rowIdx = identifying_line_to_change(sheets{1}, "RUN_1D_POINT_SPINUP", ...
+%     1, "number_of_runs_per_tile");
+% sheets{1} = replace_val_hlist(sheets{1}, rowIdx, ...
+%     "number_of_runs_per_tile", 1, numLoops=numLoops, valLoopNext="equal");
+% 
+% 
+% for n=2:numLoops
+%     rowIdx = identifying_line_to_change(sheets{n}, "TILE_1D", ...
+%         2, "TILE_1D");
+%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
+%         "TILE_1D", 2*n-2);
+% 
+%     rowIdx = identifying_line_to_change(sheets{n}, "TILE_1D", ...
+%         3, "TILE_1D");
+%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
+%         "TILE_1D", 2*n-1);
+% 
+%     rowIdx = identifying_line_to_change(sheets{n}, "TILE_1D", ...
+%         2*n-2, "restart_file_name");
+%     val = string(folder_name) + "_loop" + string(n-1) + "_last_timestep";
+%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
+%         "restart_file_name", val);
+% 
+%     rowIdx = identifying_line_to_change(sheets{n}, "TILE_1D", ...
+%         2*n-1, "out_class_index");
+%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
+%         "out_class_index", n, hlist=true);
+% 
+%     rowIdx = identifying_line_to_change(sheets{n}, "OUT_last_timestep", ...
+%         2, "OUT_last_timestep");
+%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
+%         "OUT_last_timestep", n);
+% 
+%     rowIdx = identifying_line_to_change(sheets{n}, "OUT_last_timestep", ...
+%         n, "tag");
+%     sheets{n} = replace_val_hlist(sheets{n}, rowIdx, ...
+%         "tag", "loop" + string(n));
+% end
+% 
+% 
+% % Find max number of columns
+% maxCols = max(cellfun(@(x) size(x,2), sheets));
+% 
+% % Pad each sheet to same width (cellfun)
+% sheets = cellfun(@(x) ...
+%     [x, repmat({""}, size(x,1), maxCols - size(x,2))], ...
+%     sheets, 'UniformOutput', false);
+% 
+% % append 2 empty rows
+% for n=1:numLoops
+%     sheets{n} = [sheets{n}; repmat({""}, 2, maxCols)];
+% end
+% 
+% % Concatenate vertically
+% result = cat(1, sheets{:});
+% 
+% 
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% [blocks, T] = cut_into_blocks(result);
+% 
+% % sepIdx = find(startsWith(strtrim(string(result(:,1))), "-"));
+% % sepIdx = [sepIdx; size(result,1)+1];
+% % 
+% % nBlocks = numel(sepIdx)-1;
+% % blocks = cell(1,nBlocks);
+% % 
+% % for i = 1:nBlocks
+% %     blocks{i} = result(sepIdx(i):sepIdx(i+1)-1, :);    
+% %     if ~startsWith(strtrim(string(blocks{i}(1,1))), "-")
+% %         disp('Issue with block, not starting with "-"')
+% %     end    
+% % end
+% % 
+% % sup = strings(nBlocks,1);
+% % cls = strings(nBlocks,1);
+% % idx = zeros(nBlocks,1);
+% % 
+% % for i = 1:nBlocks
+% %     sup(i) = string(blocks{i}{2,1});
+% %     cls(i) = string(blocks{i}{3,1});
+% %     idx(i) = blocks{i}{3,2};
+% % end
+% % 
+% % T = table(sup, cls, idx);
+% supOrder = ["RUN_INFO"; "POINT"; "TILE"; "FORCING"; "OUT"; "GRID";
+%     "STRATIGRAPHY_CLASSES"; "STRATIGRAPHY_STATVAR"; "GROUND"; "SNOW";
+%     "LATERAL"; "LATERAL_IA"];
+% [~, T.supRank] = ismember(T.sup, supOrder); 
+% T.supRank(T.supRank == 0) = inf;
+% T.blocks = blocks(:);
+% T = sortrows(T, {'supRank','idx'});
+% 
+% blocks(:) = T.blocks;
+% 
+% % Concatenate vertically
+% result = cat(1, blocks{:});
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% % Write to Excel
+% path_out = join_rel_path(result_path,folder_name,'.xlsx');
+% if isfile(path_out)
+%     try
+%         delete(path_out);
+%     catch
+%         warning("Could not delete file: %s", path_out);
+%     end
+% end
+% 
+% writecell(result, path_out)
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% % Pad each sheet to same width (cellfun)
+% newParams = [newParams, repmat({""}, size(newParams,1), ...
+%     maxCols - size(newParams,2))];
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% [blocksNew, TNew] = cut_into_blocks(newParams);
+% 
+% % sepIdx = find(startsWith(strtrim(string(newParams(:,1))), "-"));
+% % sepIdx = [sepIdx; size(newParams,1)+1];
+% % 
+% % nBlocks = numel(sepIdx)-1;
+% % blocksNew = cell(1,nBlocks);
+% % 
+% % for i = 1:nBlocks
+% %     blocksNew{i} = newParams(sepIdx(i):sepIdx(i+1)-1, :);    
+% %     if ~startsWith(strtrim(string(blocksNew{i}(1,1))), "-")
+% %         disp('Issue with block, not starting with "-"')
+% %     end    
+% % end
+% % 
+% % sup = strings(nBlocks,1);
+% % cls = strings(nBlocks,1);
+% % idx = zeros(nBlocks,1);
+% % 
+% % for i = 1:nBlocks
+% %     sup(i) = string(blocksNew{i}{2,1});
+% %     cls(i) = string(blocksNew{i}{3,1});
+% %     idx(i) = blocksNew{i}{3,2};
+% % end
+% % 
+% % TNew = table(sup, cls, idx);
+% 
+% % clearvars;
