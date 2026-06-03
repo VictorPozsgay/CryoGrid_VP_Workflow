@@ -9,11 +9,9 @@ numLoops = 10;
 result_path = '..\CryoGridCommunity_results\templates\automatic_loops\';
 source_path = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
-% template_file = 'template_param_file'; %name of template parameter file
-% (without file extension) to modify
 
-result_path = join_rel_path(result_path);
-source_path = join_rel_path(source_path);
+% result_path = join_rel_path(result_path)+"\";
+% source_path = join_rel_path(source_path)+"\";
 
 
 
@@ -204,197 +202,122 @@ T.blocks = blocks(:);
 
 end
 
-% -------------------------------------------------------------------------
-%                             code run
-% -------------------------------------------------------------------------
+function [TOut, idxBlock] = modify_blocks(TIn, TOut, idxOut, sup, cls, idx, ops)
+%MODIFY_BLOCKS Copy a block from TIn to TOut and modify one or more parameters.
+%
+%   TOut = MODIFY_BLOCKS(TIn, TOut, idxOut, sup, cls, idx, ops)
+%
+%   Searches TIn for the unique block identified by the triplet
+%   (sup, cls, idx). The corresponding block is copied into TOut.
+%
+%   The source block is located by finding the row of TIn satisfying:
+%
+%       TIn.sup == sup
+%       TIn.cls == cls
+%       TIn.idx == idx
+%
+%   The index of the matching block is denoted idxBlock.
+%
+%   Destination block selection:
+%       - If idxOut is a positive integer, the copied block is written
+%         to TOut.blocks{idxOut}.
+%       - If idxOut is 0 or false, the copied block is written to
+%         TOut.blocks{idxBlock}, i.e. the same position as in TIn.
+%
+%   After the block has been copied, a sequence of parameter
+%   modifications is applied to the copied block in TOut.
+%
+%   ops is a structure array whose elements contain:
+%
+%       ops(k).param   Parameter name to modify.
+%       ops(k).value   New value to assign to the parameter.
+%
+%   For each operation k:
+%
+%       1. The parameter line corresponding to ops(k).param is located
+%          within the copied block using IDENTIFYING_LINE_TO_CHANGE.
+%
+%       2. The parameter value is replaced by ops(k).value using
+%          REPLACE_VAL_HLIST.
+%
+%   The source block in TIn is never modified.
+%
+%   Inputs
+%   ------
+%   TIn     Source table containing the original blocks.
+%   TOut    Destination table to be modified.
+%   idxOut  Destination block index. If 0 or false, use idxBlock.
+%   sup     Superclass identifier of the source block.
+%   cls     Class identifier of the source block.
+%   idx     Numerical class index of the source block.
+%   ops     Structure array of parameter modifications.
+%
+%   Output
+%   ------
+%   TOut      Modified output table.
+%   idxBlock  Index of the source block found in TIn corresponding to
+%             the triplet (sup, cls, idx).
+%
+%   Example
+%   -------
+%       ops(1).param = "tile_class";
+%       ops(1).value = repmat({"TILE_1D"},1,2*numLoops-1);
+%
+%       ops(2).param = "start_time";
+%       ops(2).value = {1958, 9, 1};
+%
+%       [TOut, idxBlock] = modify_blocks( ...
+%           TInit, TOut, 0, ...
+%           "RUN_INFO", "RUN_1D_POINT_SPINUP", 1, ...
+%           ops);
+%
 
-[~, folder_name] = fileparts(join_rel_path(result_path));
-
-newParams = format_template(result_path,'NEW_PARAMS','.xlsx');
-
-init = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
-next = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
-
-TNew = cut_into_blocks(newParams);
-TInit = cut_into_blocks(init);
-blocksInit = TInit.blocks(:)';
-TNext = cut_into_blocks(next);
-
-mask = (TInit.sup == "RUN_INFO") & ...
-    (TInit.cls == "RUN_1D_POINT_SPINUP") & ...
-    (TInit.idx == 1);
+mask = (TIn.sup == sup) & (TIn.cls == cls) & (TIn.idx == idx);
 idxBlock = find(mask);
 
-rowIdx = identifying_line_to_change(TInit.blocks{idxBlock}, ...
-    "RUN_1D_POINT_SPINUP", 1, "tile_class");
-TInit.blocks{idxBlock} = replace_val_hlist(TInit.blocks{idxBlock}, ...
-    rowIdx, "tile_class", repmat({"TILE_1D"}, 1, 2*numLoops-1));
+if ~idxOut
+    idxOut = idxBlock;
+end
 
-rowIdx = identifying_line_to_change(TInit.blocks{idxBlock}, ...
-    "RUN_1D_POINT_SPINUP", 1, "tile_class_index");
-TInit.blocks{idxBlock} = replace_val_hlist(TInit.blocks{idxBlock}, ...
-    rowIdx, "tile_class_index", num2cell(1:2*numLoops-1));
+TOut.blocks{idxOut} = TIn.blocks{idxBlock};
 
-rowIdx = identifying_line_to_change(TInit.blocks{idxBlock}, ...
-    "RUN_1D_POINT_SPINUP", 1, "number_of_runs_per_tile");
-TInit.blocks{idxBlock} = replace_val_hlist(TInit.blocks{idxBlock}, ...
-    rowIdx, "number_of_runs_per_tile", num2cell(ones(1,2*numLoops-1)));
+for k = 1:numel(ops)
+    param = ops(k).param;
+    value = ops(k).value;
 
- 
-% Maximum width across all blocks
-maxCols = max([ ...
-    cellfun(@(x) size(x,2), TInit.blocks); ...
-    cellfun(@(x) size(x,2), TNext.blocks); ...
-    cellfun(@(x) size(x,2), TNew.blocks) ]);
+    rowIdx = identifying_line_to_change(TIn.blocks{idxBlock}, ...
+        cls, idx, param);
 
-padBlock = @(B) padBlockFcn(B, maxCols);
+    TOut.blocks{idxOut} = replace_val_hlist( ...
+        TOut.blocks{idxOut}, rowIdx, param, value);
 
-TInit.blocks = cellfun(padBlock, TInit.blocks, 'UniformOutput', false);
-TNext.blocks = cellfun(padBlock, TNext.blocks, 'UniformOutput', false);
-TNew.blocks  = cellfun(padBlock, TNew.blocks,  'UniformOutput', false);
+end
+
+end
 
 function B = padBlockFcn(B, maxCols)
 
-    % Pad columns
-    B = [B, repmat({""}, size(B,1), maxCols-size(B,2))];
+% Pad columns
+B = [B, repmat({""}, size(B,1), maxCols-size(B,2))];
 
-    % Count trailing rows that are entirely ""
-    trailingEmpty = 0;
+% Count trailing rows that are entirely ""
+trailingEmpty = 0;
 
-    for r = size(B,1):-1:1
-        if all(string(B(r,:)) == "")
-            trailingEmpty = trailingEmpty + 1;
-        else
-            break
-        end
-    end
-
-    % Ensure at least 2 trailing empty rows
-    if trailingEmpty < 2
-        B = [B;
-             repmat({""}, 2-trailingEmpty, maxCols)];
-    end
-
-end
-
-% for i = 1:size(TNew,1)
-for i = 1:size(TNew,1)
-    rowA = TNew(i,1:3);
-    [tfInit, idxInit] = ismember(rowA, TInit(:,1:3), 'rows');
-    [tfNext, idxNext] = ismember(rowA, TNext(:,1:3), 'rows');
-    if strcmp(rowA.cls, "STRAT_linear")
-        if tfInit
-            TInit.blocks{idxInit} = TNew.blocks{i};
-        elseif tfNext
-            TNext.blocks{idxNext} = TNew.blocks{i};
-        end
+for r = size(B,1):-1:1
+    if all(string(B(r,:)) == "")
+        trailingEmpty = trailingEmpty + 1;
     else
-        for j = 1:size(TNew.blocks{i},1)
-            row = TNew.blocks{i}(j,:);
-            strt = string(row(1));
-            if ~strcmp(strt,"")
-                % disp(strt)
-                if tfInit
-                    matchIdx = find(strcmp(string(TInit.blocks{idxInit}(:,1)), strt));
-                    % disp(matchIdx)
-                    for m=1:numel(matchIdx)
-                        TInit.blocks{idxInit}(matchIdx(m),1:numel(row)) = row;
-                    end
-                elseif tfNext
-                    matchIdx = find(strcmp(string(TNext.blocks{idxNext}(:,1)), strt));
-                    % disp(matchIdx)
-                    for m=1:numel(matchIdx)
-                        TNext.blocks{idxNext}(matchIdx(m),1:numel(row)) = row;
-                    end
-                end
-            end
-        end
+        break
     end
 end
 
-nInit = size(TInit,1);
-nNext = size(TNext,1);
-nAll  = nInit + (numLoops-1)*nNext;
-
-TAll = TInit;
-% blocksAll = blocksInit;
-
-for n = 2:numLoops
-    TNextTemp = TNext;
-
-    % First TILE with restart_OUT_last_timestep
-
-    mask = (TNextTemp.sup == "TILE") & ...
-        (TNextTemp.cls == "TILE_1D") & ...
-        (TNextTemp.idx == 2);
-
-    TNextTemp.idx(mask) = 2*n-2;
-
-    rowIdx = identifying_line_to_change(TNext.blocks{1}, "TILE_1D", ...
-        2, "TILE_1D");
-    TNextTemp.blocks{1} = replace_val_hlist(TNextTemp.blocks{1}, ...
-        rowIdx, "TILE_1D", 2*n-2);
-
-    rowIdx = identifying_line_to_change(TNext.blocks{1}, "TILE_1D", ...
-        2, "restart_file_name");
-    val = string(folder_name) + "_loop" + string(n-1) + "_last_timestep";
-    TNextTemp.blocks{1} = replace_val_hlist(TNextTemp.blocks{1}, ...
-        rowIdx, "restart_file_name", val);
-
-    % Second TILE with update_forcing_out
-
-    mask = (TNextTemp.sup == "TILE") & ...
-        (TNextTemp.cls == "TILE_1D") & ...
-        (TNextTemp.idx == 3);
-
-    TNextTemp.idx(mask) = 2*n-1;
-
-    rowIdx = identifying_line_to_change(TNext.blocks{2}, "TILE_1D", ...
-        3, "TILE_1D");
-    TNextTemp.blocks{2} = replace_val_hlist(TNextTemp.blocks{2}, ...
-        rowIdx, "TILE_1D", 2*n-1);
-
-    rowIdx = identifying_line_to_change(TNext.blocks{2}, "TILE_1D", ...
-        3, "out_class_index");
-    TNextTemp.blocks{2} = replace_val_hlist(TNextTemp.blocks{2}, ...
-        rowIdx, "out_class_index", {n});
-
-    % Third TILE with OUT_last_timestep
-
-    mask = (TNextTemp.sup == "OUT") & ...
-        (TNextTemp.cls == "OUT_last_timestep") & ...
-        (TNextTemp.idx == 2);
-
-    TNextTemp.idx(mask) = n;
-
-    rowIdx = identifying_line_to_change(TNext.blocks{3}, ...
-        "OUT_last_timestep", 2, "OUT_last_timestep");
-    TNextTemp.blocks{3} = replace_val_hlist(TNextTemp.blocks{3}, ...
-        rowIdx, "OUT_last_timestep", n);
-
-    rowIdx = identifying_line_to_change(TNext.blocks{3}, ...
-        "OUT_last_timestep", 2, "tag");
-    TNextTemp.blocks{3} = replace_val_hlist(TNextTemp.blocks{3}, ...
-        rowIdx, "tag", "loop" + string(n));
-
-    % Concatenate
-
-    TAll = vertcat(TAll, TNextTemp);
+% Ensure at least 2 trailing empty rows
+if trailingEmpty < 2
+    B = [B;
+        repmat({""}, 2-trailingEmpty, maxCols)];
 end
 
-supOrder = ["RUN_INFO"; "POINT"; "TILE"; "FORCING"; "OUT"; "GRID";
-    "STRATIGRAPHY_CLASSES"; "STRATIGRAPHY_STATVAR"; "GROUND"; "SNOW";
-    "LATERAL"; "LATERAL_IA"];
-[~, TAll.supRank] = ismember(TAll.sup, supOrder); 
-TAll.supRank(TAll.supRank == 0) = inf;
-TAll = sortrows(TAll, {'supRank','idx'});
-
-% blocksAll(:) = TAll.blocks;
-
-% Concatenate vertically
-result = cat(1, TAll.blocks{:});
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+end
 
 function tf = compareBlocks(blocksInit, blocksCheck)
 
@@ -426,8 +349,198 @@ end
 
 end
 
+function run_CG(source_path, init_format, run_name, result_path, constant_file)
+
+% add source code path
+addpath(genpath(source_path));
+
+%create and load PROVIDER
+provider = PROVIDER;
+provider = assign_paths(provider, init_format, run_name, result_path, constant_file);
+provider = read_const(provider);
+provider = read_parameters(provider);
+
+% create RUN_INFO class
+[run_info, ~] = run_model(provider);
+% run model
+[~, ~] = run_model(run_info);
+
+toc
+
+end
+
+function run_CG_parallel(source_path, init_format, run_names, result_path, constant_file)
+
+% add source code path
+addpath(genpath(source_path));
+
+%% --- Parallel pool
+delete(gcp('nocreate'))
+nWorkers = length(run_names);   % 1 node per run
+nWorkers = min(nWorkers, parcluster('local').NumWorkers);
+parpool('local', nWorkers);
+
+%% --- Running parallel jobs
+parfor i = 1:numel(run_names)
+
+    run_name = run_names{i};
+
+    fprintf('--- Running %s on worker %d ---\n', run_name, getCurrentTask().ID);
+
+    % PROVIDER local (important)
+    provider = PROVIDER;
+    provider = assign_paths(provider, init_format, run_name, result_path, constant_file);
+    provider = read_const(provider);
+    provider = read_parameters(provider);
+
+    % Run CryoGrid
+    [run_info, ~] = run_model(provider);
+    [~, ~] = run_model(run_info);
+
+    fprintf('--- End %s ---\n', run_name);
+end
+
+end
+
+% -------------------------------------------------------------------------
+%                             code run
+% -------------------------------------------------------------------------
+
+[~, folder_name] = fileparts(join_rel_path(result_path));
+
+newParams = format_template(result_path,'NEW_PARAMS','.xlsx');
+
+init = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
+next = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
+
+TNew = cut_into_blocks(newParams);
+TInit = cut_into_blocks(init);
+TNext = cut_into_blocks(next);
+
+ops = struct([]);
+ops(1).param = "tile_class";
+ops(1).value = repmat({"TILE_1D"}, 1, 2*numLoops-1);
+
+ops(2).param = "tile_class_index";
+ops(2).value = num2cell(1:2*numLoops-1);
+
+ops(3).param = "number_of_runs_per_tile";
+ops(3).value = num2cell(ones(1,2*numLoops-1));
+
+[TInit, ~] = modify_blocks(TInit, TInit, false, ...
+    "RUN_INFO", "RUN_1D_POINT_SPINUP", 1, ops);
+
+
+% Maximum width across all blocks
+maxCols = max([ ...
+    cellfun(@(x) size(x,2), TInit.blocks); ...
+    cellfun(@(x) size(x,2), TNext.blocks); ...
+    cellfun(@(x) size(x,2), TNew.blocks) ]);
+
+padBlock = @(B) padBlockFcn(B, maxCols);
+
+TInit.blocks = cellfun(padBlock, TInit.blocks, 'UniformOutput', false);
+TNext.blocks = cellfun(padBlock, TNext.blocks, 'UniformOutput', false);
+TNew.blocks  = cellfun(padBlock, TNew.blocks,  'UniformOutput', false);
+
+
+
+for i = 1:size(TNew,1)
+    rowA = TNew(i,1:3);
+    [tfInit, idxInit] = ismember(rowA, TInit(:,1:3), 'rows');
+    [tfNext, idxNext] = ismember(rowA, TNext(:,1:3), 'rows');
+    if strcmp(rowA.cls, "STRAT_linear")
+        if tfInit
+            TInit.blocks{idxInit} = TNew.blocks{i};
+        elseif tfNext
+            TNext.blocks{idxNext} = TNew.blocks{i};
+        end
+    else
+        for j = 1:size(TNew.blocks{i},1)
+            row = TNew.blocks{i}(j,:);
+            strt = string(row(1));
+            if ~strcmp(strt,"")
+                if tfInit
+                    matchIdx = find(strcmp(string(TInit.blocks{idxInit}(:,1)), strt));
+                    for m=1:numel(matchIdx)
+                        TInit.blocks{idxInit}(matchIdx(m),1:numel(row)) = row;
+                    end
+                elseif tfNext
+                    matchIdx = find(strcmp(string(TNext.blocks{idxNext}(:,1)), strt));
+                    for m=1:numel(matchIdx)
+                        TNext.blocks{idxNext}(matchIdx(m),1:numel(row)) = row;
+                    end
+                end
+            end
+        end
+    end
+end
+
+nInit = size(TInit,1);
+nNext = size(TNext,1);
+nAll  = nInit + (numLoops-1)*nNext;
+
+TAll = TInit;
+
+for n = 2:numLoops
+    TNextTemp = TNext;
+
+    % First TILE with restart_OUT_last_timestep
+    ops = struct([]);
+    
+    ops(1).param = "TILE_1D";
+    ops(1).value = 2*n-2;
+
+    ops(2).param = "restart_file_name";
+    ops(2).value = string(folder_name) + "_loop" + string(n-1) + "_last_timestep";
+
+    [TNextTemp, idxBlock] = modify_blocks(TNext, TNextTemp, false, ...
+        "TILE", "TILE_1D", 2, ops);
+    TNextTemp.idx(idxBlock) = 2*n-2;
+
+    % Second TILE with update_forcing_out
+    ops = struct([]);
+
+    ops(1).param = "TILE_1D";
+    ops(1).value = 2*n-1;
+
+    ops(2).param = "out_class_index";
+    ops(2).value = {n};
+
+    [TNextTemp, idxBlock] = modify_blocks(TNext, TNextTemp, false, ...
+        "TILE", "TILE_1D", 3, ops);
+    TNextTemp.idx(idxBlock) = 2*n-1;
+ 
+    % Third TILE with OUT_last_timestep
+    ops = struct([]);
+
+    ops(1).param = "OUT_last_timestep";
+    ops(1).value = n;
+
+    ops(2).param = "tag";
+    ops(2).value = "loop" + string(n);
+
+    [TNextTemp, idxBlock] = modify_blocks(TNext, TNextTemp, false, ...
+        "OUT", "OUT_last_timestep", 2, ops);
+    TNextTemp.idx(idxBlock) = n;
+
+    % Concatenate
+    TAll = vertcat(TAll, TNextTemp);
+end
+
+supOrder = ["RUN_INFO"; "POINT"; "TILE"; "FORCING"; "OUT"; "GRID";
+    "STRATIGRAPHY_CLASSES"; "STRATIGRAPHY_STATVAR"; "GROUND"; "SNOW";
+    "LATERAL"; "LATERAL_IA"];
+[~, TAll.supRank] = ismember(TAll.sup, supOrder); 
+TAll.supRank(TAll.supRank == 0) = inf;
+TAll = sortrows(TAll, {'supRank','idx'});
+
+% Concatenate vertically
+result = cat(1, TAll.blocks{:});
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 TCheck = cut_into_blocks(result);
-blocksCheck = TCheck.blocks(:);
 tfa = all(all(TAll{:,1:3} == TCheck{:,1:3}));
 tfb = compareBlocks(TAll.blocks(:), TCheck.blocks(:));
 
@@ -455,134 +568,201 @@ if tfa && tfb
             warning("Could not delete file: %s", path_out);
         end
     end
-
+    disp('Writing file')
     writecell(result, path_out)
 end
 
+run_CG(source_path, init_format, folder_name, ...
+    extractBefore(result_path, folder_name), constant_file)
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% restart = format_template(result_path,'RESTART','.xlsx');
-% TRestart = cut_into_blocks(restart);
-% blocksRestart = TRestart.blocks(:);
-% blocksRestart = cellfun(padBlock, blocksRestart, 'UniformOutput', false);
-% 
-% blocksRun = cell(1,9);
-% 
-% % Class 1
-% mask = (TAll.sup == "RUN_INFO") & ...
-%     (TAll.cls == "RUN_1D_POINT_SPINUP") & ...
-%     (TAll.idx == 1);
-% idxBlock = find(mask);
-% 
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "RUN_1D_POINT_SPINUP", 1, "tile_class");
-% blocksRun{1,1} = replace_val_hlist(blocksAll{1,idxBlock}, ...
-%     rowIdx, "tile_class", {"TILE_1D","TILE_1D"});
-% 
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "RUN_1D_POINT_SPINUP", 1, "tile_class_index");
-% blocksRun{1,1} = replace_val_hlist(blocksRun{1,1}, ...
-%     rowIdx, "tile_class_index", {1,2});
-% 
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "RUN_1D_POINT_SPINUP", 1, "number_of_runs_per_tile");
-% blocksRun{1,1} = replace_val_hlist(blocksRun{1,1}, ...
-%     rowIdx, "number_of_runs_per_tile", {1,1});
-% 
-% % Class 2
-% mask = (TAll.sup == "POINT") & ...
-%     (TAll.cls == "POINT_SLOPE") & ...
-%     (TAll.idx == 1);
-% idxBlock = find(mask);
-% 
-% blocksRun{1,2} = blocksAll{1,idxBlock};
-% 
-% % Class 3
-% mask = (TAll.sup == "TILE") & ...
-%     (TAll.cls == "TILE_1D") & ...
-%     (TAll.idx == 2);
-% idxBlock = find(mask);
-% 
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "TILE_1D", 2, "TILE_1D");
-% blocksRun{1,3} = replace_val_hlist(blocksAll{1,idxBlock}, ...
-%     rowIdx, "TILE_1D", 1);
-% % !!!!!!!!! MAYBE HAVE ONE FOR RESTART FILE PATH IF PUT INTO UNIQUE FOLDER
-% 
-% % Class 4
-% mask = (TAll.sup == "TILE") & ...
-%     (TAll.cls == "TILE_1D") & ...
-%     (TAll.idx == 3);
-% idxBlock = find(mask);
-% 
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "TILE_1D", 3, "TILE_1D");
-% blocksRun{1,4} = replace_val_hlist(blocksAll{1,idxBlock}, ...
-%     rowIdx, "TILE_1D", 2);
-% 
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "TILE_1D", 3, "out_class");
-% blocksRun{1,4} = replace_val_hlist(blocksRun{1,4}, rowIdx, ...
-%     "out_class", {"OUT_regridded","OUT_all_lateral","OUT_snow_all"});
-% 
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "TILE_1D", 3, "out_class_index");
-% blocksRun{1,4} = replace_val_hlist(blocksRun{1,4}, rowIdx, ...
-%     "out_class_index", {1,1,1});
-% 
-% % Class 5
-% mask = (TAll.sup == "FORCING") & ...
-%     (TAll.cls == "FORCING_seb_mat") & ...
-%     (TAll.idx == 1);
-% idxBlock = find(mask);
-% 
-% blocksRun{1,5} = blocksAll{1,idxBlock};
-% 
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "FORCING_seb_mat", 1, "start_time");
-% time = blocksRun{5}(rowIdx,:);
-% s = string(time);
-% iStart = find(s == "H_LIST", 1);
-% iEnd   = find(s == "END", 1);
-% vals = time(iStart+1:iEnd-1);
-% rowIdx = identifying_line_to_change(blocksAll{1,idxBlock}, ...
-%     "FORCING_seb_mat", 1, "end_time");
-% blocksRun{1,5} = replace_val_hlist(blocksRun{1,5}, rowIdx, ...
-%     "end_time", vals);
-% 
-% % Class 6
-% mask = (TAll.sup == "OUT") & ...
-%     (TAll.cls == "OUT_do_nothing") & ...
-%     (TAll.idx == 1);
-% idxBlock = find(mask);
-% 
-% blocksRun{1,6} = blocksAll{1,idxBlock};
-% 
-% 
-% % Class 7
-% mask = (TRestart.sup == "OUT") & ...
-%     (TRestart.cls == "OUT_regridded") & ...
-%     (TRestart.idx == 1);
-% idxBlock = find(mask);
-% 
-% blocksRun{1,7} = blocksAll{1,idxBlock};
-% 
-% % Class 8
-% mask = (TRestart.sup == "OUT") & ...
-%     (TRestart.cls == "OUT_all_lateral") & ...
-%     (TRestart.idx == 1);
-% idxBlock = find(mask);
-% 
-% blocksRun{1,8} = blocksAll{1,idxBlock};
-% 
-% % Class 9
-% mask = (TRestart.sup == "OUT") & ...
-%     (TRestart.cls == "OUT_snow_all") & ...
-%     (TRestart.idx == 1);
-% idxBlock = find(mask);
-% 
-% blocksRun{1,9} = blocksAll{1,idxBlock};
-% 
-% 
-% 
-% % clearvars;
+restart = format_template(result_path,'RESTART','.xlsx');
+TRestart = cut_into_blocks(restart);
+TRestart.blocks = cellfun(padBlock, TRestart.blocks, 'UniformOutput', false);
+
+n = 9;
+TRun = table(strings(n,1), strings(n,1), zeros(n,1), cell(n,1), ...
+    'VariableNames', {'sup','cls','idx','blocks'} );
+
+
+% Class 1
+i = 1;
+ops = struct([]);
+
+ops(1).param = "tile_class";
+ops(1).value = {"TILE_1D","TILE_1D"};
+
+ops(2).param = "tile_class_index";
+ops(2).value = {1,2};
+
+ops(3).param = "number_of_runs_per_tile";
+ops(3).value = {1,1};
+
+[TRun, ~] = modify_blocks(TAll, TRun, i, ...
+    "RUN_INFO", "RUN_1D_POINT_SPINUP", 1, ops);
+TRun.sup(i) = "RUN_INFO";
+TRun.cls(i) = "RUN_1D_POINT_SPINUP";
+TRun.idx(i) = 1;
+
+% Class 2
+i = 2;
+ops = struct([]);
+
+[TRun, ~] = modify_blocks(TAll, TRun, i, ...
+    "POINT", "POINT_SLOPE", 1, ops);
+TRun.sup(i) = "POINT";
+TRun.cls(i) = "POINT_SLOPE";
+TRun.idx(i) = 1;
+
+% Class 3
+i = 3;
+ops = struct([]);
+
+ops(1).param = "TILE_1D";
+ops(1).value = 1;
+
+[TRun, ~] = modify_blocks(TAll, TRun, i, ...
+    "TILE", "TILE_1D", 2, ops);
+TRun.sup(i) = "TILE";
+TRun.cls(i) = "TILE_1D";
+TRun.idx(i) = 1;
+% !!!!!!!!! MAYBE HAVE ONE FOR RESTART FILE PATH IF PUT INTO UNIQUE FOLDER
+
+% Class 4
+i = 4;
+ops = struct([]);
+
+ops(1).param = "TILE_1D";
+ops(1).value = 2;
+
+ops(2).param = "out_class";
+ops(2).value = {"OUT_regridded","OUT_all_lateral","OUT_snow_all"};
+
+ops(3).param = "out_class_index";
+ops(3).value = {1,1,1};
+
+[TRun, ~] = modify_blocks(TAll, TRun, i, ...
+    "TILE", "TILE_1D", 3, ops);
+TRun.sup(i) = "TILE";
+TRun.cls(i) = "TILE_1D";
+TRun.idx(i) = 2;
+
+% Class 5
+i = 5;
+ops = struct([]);
+
+[TRun, ~] = modify_blocks(TAll, TRun, i, ...
+    "FORCING", "FORCING_seb_mat", 1, ops);
+TRun.sup(i) = "FORCING";
+TRun.cls(i) = "FORCING_seb_mat";
+TRun.idx(i) = 1;
+
+rowIdx = identifying_line_to_change(TRun.blocks{i}, ...
+    "FORCING_seb_mat", 1, "start_time");
+time = TRun.blocks{i}(rowIdx,:);
+s = string(time);
+iStart = find(s == "H_LIST", 1);
+iEnd   = find(s == "END", 1);
+vals = time(iStart+1:iEnd-1);
+
+dt = datetime(vals{1}, vals{2}, vals{3});
+dt = dt + days(1);
+
+vals = {year(dt), month(dt), day(dt)};
+
+ops = struct([]);
+
+ops(1).param = "end_time";
+ops(1).value = vals;
+
+[TRun, idxBlock] = modify_blocks(TAll, TRun, i, ...
+    "FORCING", "FORCING_seb_mat", 1, ops);
+
+% Class 6
+i = 6;
+ops = struct([]);
+
+[TRun, ~] = modify_blocks(TAll, TRun, i, ...
+    "OUT", "OUT_do_nothing", 1, ops);
+TRun.sup(i) = "OUT";
+TRun.cls(i) = "OUT_do_nothing";
+TRun.idx(i) = 1;
+
+% Class 7
+i = 7;
+ops = struct([]);
+
+[TRun, ~] = modify_blocks(TRestart, TRun, i, ...
+    "OUT", "OUT_regridded", 1, ops);
+TRun.sup(i) = "OUT";
+TRun.cls(i) = "OUT_regridded";
+TRun.idx(i) = 1;
+
+% Class 8
+i = 8;
+ops = struct([]);
+
+[TRun, ~] = modify_blocks(TRestart, TRun, i, ...
+    "OUT", "OUT_all_lateral", 1, ops);
+TRun.sup(i) = "OUT";
+TRun.cls(i) = "OUT_all_lateral";
+TRun.idx(i) = 1;
+
+% Class 9
+i = 9;
+ops = struct([]);
+
+[TRun, ~] = modify_blocks(TRestart, TRun, i, ...
+    "OUT", "OUT_snow_all", 1, ops);
+TRun.sup(i) = "OUT";
+TRun.cls(i) = "OUT_snow_all";
+TRun.idx(i) = 1;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+for n = 1:numLoops
+    folder = join_rel_path(result_path,"loop" + string(n));
+    if ~exist(folder, 'dir')
+        mkdir(folder);
+    end
+
+    file = string(folder_name) + "_loop" + string(n) + "_last_timestep";
+
+    ops = struct([]);
+
+    ops(1).param = "restart_file_path";
+    ops(1).value = folder+"\";
+
+    ops(2).param = "restart_file_name";
+    ops(2).value = file;
+
+    [TRun, ~] = modify_blocks(TRun, TRun, false, ...
+        "TILE", "TILE_1D", 1, ops);
+
+    % Concatenate vertically
+    run = cat(1, TRun.blocks{:});
+
+    % Write to Excel
+    path_out = join_rel_path(folder,"loop" + string(n),'.xlsx');
+    if isfile(path_out)
+        try
+            delete(path_out);
+        catch
+            warning("Could not delete file: %s", path_out);
+        end
+    end
+    % disp('Writing file')
+    writecell(run, path_out)
+
+    copyfile(join_rel_path(result_path,constant_file,ext_dict(init_format)),folder)
+    copyfile(join_rel_path(result_path,file,".mat"),folder)
+end
+
+run_names = arrayfun(@(k) sprintf('loop%d', k), ...
+    1:numLoops, 'UniformOutput', false)';
+run_CG_parallel(source_path, init_format, run_names, ...
+    result_path, constant_file)
+
+% clearvars;

@@ -4,7 +4,7 @@
 
 %% --- Paramètres généraux (inchangés)
 init_format   = 'EXCEL3D';
-result_path  = '..\CryoGridCommunity_results\test_spinup\';
+result_path  = '..\CryoGridCommunity_results\templates\automatic_loops\';
 source_path  = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel';
 
@@ -12,17 +12,24 @@ addpath(genpath(source_path));
 
 %% --- Liste des runs à lancer
 run_names = {
-    'classic_neg2_50'
-    'classic_neg2_100'
-    'classic_pos2_50'
-    'classic_pos2_100'
+    'loop1'
+    'loop2'
+    'loop3'
+    'loop4'
+    'loop5'
+    'loop6'
+    'loop7'
+    'loop8'
+    'loop9'
+    'loop10'
 };
 
 
 
 %% --- Pool parallèle
 delete(gcp('nocreate'))
-nWorkers = length(run_names);   % 1 cœur par run
+nWorkers = length(run_names);   % 1 node per run
+nWorkers = min(nWorkers, parcluster('local').NumWorkers);
 parpool('local', nWorkers);
 
 %% --- Lancement parallèle
