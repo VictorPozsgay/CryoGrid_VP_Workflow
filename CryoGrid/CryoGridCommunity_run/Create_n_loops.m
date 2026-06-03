@@ -4,19 +4,13 @@
 init_format = 'EXCEL3D'; % choose the option corresponding to the parameter file format
 ext_dict = dictionary('EXCEL3D','.xlsx');
 
-numLoops = 10;
+numLoops = 2;
 
 result_path = '..\CryoGridCommunity_results\templates\automatic_loops\';
 source_path = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
 
-% result_path = join_rel_path(result_path)+"\";
-% source_path = join_rel_path(source_path)+"\";
-
-
-
 modify.restart_file_path = result_path;
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%% end user-modified part %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -487,7 +481,7 @@ for n = 2:numLoops
 
     % First TILE with restart_OUT_last_timestep
     ops = struct([]);
-    
+
     ops(1).param = "TILE_1D";
     ops(1).value = 2*n-2;
 
@@ -510,7 +504,7 @@ for n = 2:numLoops
     [TNextTemp, idxBlock] = modify_blocks(TNext, TNextTemp, false, ...
         "TILE", "TILE_1D", 3, ops);
     TNextTemp.idx(idxBlock) = 2*n-1;
- 
+
     % Third TILE with OUT_last_timestep
     ops = struct([]);
 
