@@ -400,16 +400,24 @@ end
 %                             code run
 % -------------------------------------------------------------------------
 
+% -------------------------------------------------------------------------
+%                             PART I
+%                             CREATE AUTOMATIC LOOPS
+% -------------------------------------------------------------------------
+
+
+
 [~, folder_name] = fileparts(join_rel_path(result_path));
 
 newParams = format_template(result_path,'NEW_PARAMS','.xlsx');
-
 init = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
 next = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
+restart = format_template(result_path,'RESTART','.xlsx');
 
 TNew = cut_into_blocks(newParams);
 TInit = cut_into_blocks(init);
 TNext = cut_into_blocks(next);
+TRestart = cut_into_blocks(restart);
 
 ops = struct([]);
 ops(1).param = "tile_class";
@@ -424,6 +432,13 @@ ops(3).value = num2cell(ones(1,2*numLoops-1));
 [TInit, ~] = modify_blocks(TInit, TInit, false, ...
     "RUN_INFO", "RUN_1D_POINT_SPINUP", 1, ops);
 
+ops = struct([]);
+ops(1).param = "restart_file_path";
+ops(1).value = result_path;
+
+[TNext, ~] = modify_blocks(TNext, TNext, false, ...
+    "TILE", "TILE_1D", 2, ops);
+
 
 % Maximum width across all blocks
 maxCols = max([ ...
@@ -436,18 +451,21 @@ padBlock = @(B) padBlockFcn(B, maxCols);
 TInit.blocks = cellfun(padBlock, TInit.blocks, 'UniformOutput', false);
 TNext.blocks = cellfun(padBlock, TNext.blocks, 'UniformOutput', false);
 TNew.blocks  = cellfun(padBlock, TNew.blocks,  'UniformOutput', false);
-
+TRestart.blocks = cellfun(padBlock, TRestart.blocks, 'UniformOutput', false);
 
 
 for i = 1:size(TNew,1)
     rowA = TNew(i,1:3);
     [tfInit, idxInit] = ismember(rowA, TInit(:,1:3), 'rows');
     [tfNext, idxNext] = ismember(rowA, TNext(:,1:3), 'rows');
+    [tfRestart, idxRestart] = ismember(rowA, TRestart(:,1:3), 'rows');
     if strcmp(rowA.cls, "STRAT_linear")
         if tfInit
             TInit.blocks{idxInit} = TNew.blocks{i};
         elseif tfNext
             TNext.blocks{idxNext} = TNew.blocks{i};
+        elseif tfRestart
+            TRestart.blocks{idxRestart} = TNew.blocks{i};
         end
     else
         for j = 1:size(TNew.blocks{i},1)
@@ -463,6 +481,11 @@ for i = 1:size(TNew,1)
                     matchIdx = find(strcmp(string(TNext.blocks{idxNext}(:,1)), strt));
                     for m=1:numel(matchIdx)
                         TNext.blocks{idxNext}(matchIdx(m),1:numel(row)) = row;
+                    end
+                elseif tfRestart
+                    matchIdx = find(strcmp(string(TRestart.blocks{idxRestart}(:,1)), strt));
+                    for m=1:numel(matchIdx)
+                        TRestart.blocks{idxRestart}(matchIdx(m),1:numel(row)) = row;
                     end
                 end
             end
@@ -566,15 +589,19 @@ if tfa && tfb
     writecell(result, path_out)
 end
 
+% -------------------------------------------------------------------------
+%                             PART II
+%                             RUN AUTOMATIC LOOPS
+% -------------------------------------------------------------------------
+
 run_CG(source_path, init_format, folder_name, ...
     extractBefore(result_path, folder_name), constant_file)
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-restart = format_template(result_path,'RESTART','.xlsx');
-TRestart = cut_into_blocks(restart);
-TRestart.blocks = cellfun(padBlock, TRestart.blocks, 'UniformOutput', false);
+% -------------------------------------------------------------------------
+%                             PART III
+%                             CREATE INDIVIDUAL LOOP RUNS
+% -------------------------------------------------------------------------
 
 n = 9;
 TRun = table(strings(n,1), strings(n,1), zeros(n,1), cell(n,1), ...
@@ -717,7 +744,7 @@ TRun.idx(i) = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 for n = 1:numLoops
-    folder = join_rel_path(result_path,"loop" + string(n));
+    folder = result_path + "loop" + string(n);
     if ~exist(folder, 'dir')
         mkdir(folder);
     end
@@ -753,6 +780,11 @@ for n = 1:numLoops
     copyfile(join_rel_path(result_path,constant_file,ext_dict(init_format)),folder)
     copyfile(join_rel_path(result_path,file,".mat"),folder)
 end
+
+% -------------------------------------------------------------------------
+%                             PART IV
+%                             RUN INDIVIDUAL LOOP RUNS
+% -------------------------------------------------------------------------
 
 run_names = arrayfun(@(k) sprintf('loop%d', k), ...
     1:numLoops, 'UniformOutput', false)';
