@@ -4,7 +4,7 @@
 init_format = 'EXCEL3D'; % choose the option corresponding to the parameter file format
 ext_dict = dictionary('EXCEL3D','.xlsx');
 
-numLoops = 2;
+numLoops = 5;
 
 result_path = '..\CryoGridCommunity_results\templates\automatic_loops\';
 source_path = '..\CryoGridCommunity_source\';
@@ -396,18 +396,7 @@ end
 
 end
 
-% -------------------------------------------------------------------------
-%                             code run
-% -------------------------------------------------------------------------
-
-% -------------------------------------------------------------------------
-%                             PART I
-%                             CREATE AUTOMATIC LOOPS
-% -------------------------------------------------------------------------
-
-
-
-[~, folder_name] = fileparts(join_rel_path(result_path));
+function [TNew, TInit, TNext, TRestart] = setup_files(result_path, numLoops)
 
 newParams = format_template(result_path,'NEW_PARAMS','.xlsx');
 init = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
@@ -453,6 +442,9 @@ TNext.blocks = cellfun(padBlock, TNext.blocks, 'UniformOutput', false);
 TNew.blocks  = cellfun(padBlock, TNew.blocks,  'UniformOutput', false);
 TRestart.blocks = cellfun(padBlock, TRestart.blocks, 'UniformOutput', false);
 
+end
+
+function [TNew, TInit, TNext, TRestart] = include_input_params(TNew, TInit, TNext, TRestart)
 
 for i = 1:size(TNew,1)
     rowA = TNew(i,1:3);
@@ -493,9 +485,11 @@ for i = 1:size(TNew,1)
     end
 end
 
-nInit = size(TInit,1);
-nNext = size(TNext,1);
-nAll  = nInit + (numLoops-1)*nNext;
+end
+
+function [TNew, TInit, TNext, TRestart, TAll, result] = create_automatic_loops(TNew, TInit, TNext, TRestart, result_path, numLoops)
+
+[~, folder_name] = fileparts(join_rel_path(result_path));
 
 TAll = TInit;
 
@@ -555,7 +549,9 @@ TAll = sortrows(TAll, {'supRank','idx'});
 % Concatenate vertically
 result = cat(1, TAll.blocks{:});
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+end
+
+function write_automatic_loops(TAll, result, result_path)
 
 TCheck = cut_into_blocks(result);
 tfa = all(all(TAll{:,1:3} == TCheck{:,1:3}));
@@ -577,6 +573,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if tfa && tfb
     % Write to Excel
+    [~, folder_name] = fileparts(join_rel_path(result_path));
     path_out = join_rel_path(result_path,folder_name,'.xlsx');
     if isfile(path_out)
         try
@@ -589,19 +586,9 @@ if tfa && tfb
     writecell(result, path_out)
 end
 
-% -------------------------------------------------------------------------
-%                             PART II
-%                             RUN AUTOMATIC LOOPS
-% -------------------------------------------------------------------------
+end
 
-run_CG(source_path, init_format, folder_name, ...
-    extractBefore(result_path, folder_name), constant_file)
-
-
-% -------------------------------------------------------------------------
-%                             PART III
-%                             CREATE INDIVIDUAL LOOP RUNS
-% -------------------------------------------------------------------------
+function TRun = create_template_loop_run(TAll, TRestart)
 
 n = 9;
 TRun = table(strings(n,1), strings(n,1), zeros(n,1), cell(n,1), ...
@@ -698,7 +685,7 @@ ops = struct([]);
 ops(1).param = "end_time";
 ops(1).value = vals;
 
-[TRun, idxBlock] = modify_blocks(TAll, TRun, i, ...
+[TRun, ~] = modify_blocks(TAll, TRun, i, ...
     "FORCING", "FORCING_seb_mat", 1, ops);
 
 % Class 6
@@ -741,7 +728,9 @@ TRun.sup(i) = "OUT";
 TRun.cls(i) = "OUT_snow_all";
 TRun.idx(i) = 1;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+end
+
+function write_individual_loop_folders(TRun, result_path, numLoops, init_format, constant_file, ext_dict)
 
 for n = 1:numLoops
     folder = result_path + "loop" + string(n);
@@ -749,6 +738,7 @@ for n = 1:numLoops
         mkdir(folder);
     end
 
+    [~, folder_name] = fileparts(join_rel_path(result_path));
     file = string(folder_name) + "_loop" + string(n) + "_last_timestep";
 
     ops = struct([]);
@@ -778,8 +768,116 @@ for n = 1:numLoops
     writecell(run, path_out)
 
     copyfile(join_rel_path(result_path,constant_file,ext_dict(init_format)),folder)
-    copyfile(join_rel_path(result_path,file,".mat"),folder)
+    movefile(join_rel_path(result_path,file,".mat"),folder)
 end
+
+end
+
+function diagnostic_run(TAll, source_path, init_format, constant_file, result_path, numLoops)
+
+skip = all(arrayfun(@(k) ...
+    isfile(fullfile(result_path,sprintf('loop%d', k), ...
+    sprintf('automatic_loops_loop%d_last_timestep.mat', k))), ...
+    1:numLoops));
+
+
+
+if ~skip
+
+    last_good_loop = 0;
+
+    % add source code path
+    addpath(genpath(source_path));
+
+    for n = 1:numLoops+1
+        [~, folder_name] = fileparts(join_rel_path(result_path));
+        file_path = result_path+"\"+folder_name+"_loop"+n+"_last_timestep.mat";
+        if isfile(file_path) 
+            file_load = load(file_path);
+        else
+            break
+        end
+        OUTPUT_TIME = file_load.out.OUTPUT_TIME;
+        SAVE_TIME = file_load.out.SAVE_TIME;
+        if OUTPUT_TIME >= SAVE_TIME
+            fprintf("All good with loop %i \n", n)
+            last_good_loop = n;
+        else
+            break
+        end
+    end
+
+    if last_good_loop < numLoops 
+        fprintf("Last good loop is loop %i \n", last_good_loop)
+    
+    
+        if last_good_loop > 0
+            ops = struct([]);
+            ops(1).param = "tile_class";
+            ops(1).value = repmat({"TILE_1D"}, 1, 2*(numLoops-last_good_loop));
+    
+            ops(2).param = "tile_class_index";
+            ops(2).value = num2cell(2*last_good_loop:2*numLoops-1);
+    
+            ops(3).param = "number_of_runs_per_tile";
+            ops(3).value = num2cell(ones(1,2*(numLoops-last_good_loop)));
+    
+            [TAll, ~] = modify_blocks(TAll, TAll, false, ...
+                "RUN_INFO", "RUN_1D_POINT_SPINUP", 1, ops);
+    
+            mask = (TAll.sup == "TILE") & (TAll.cls == "TILE_1D") & (TAll.idx < 2*last_good_loop);
+            TAll(mask,:) = [];
+    
+            mask = (TAll.sup == "OUT") & (TAll.cls == "OUT_last_timestep") & (TAll.idx <= last_good_loop);
+            TAll(mask,:) = [];
+    
+            % Concatenate vertically
+            result = cat(1, TAll.blocks{:});
+    
+            write_automatic_loops(TAll, result, result_path)
+
+        end
+
+        [~, folder_name] = fileparts(join_rel_path(result_path));
+        run_CG(source_path, init_format, folder_name, ...
+            extractBefore(result_path, folder_name), constant_file)
+
+    end
+
+else
+    disp("All folders were already created, we can skip to the parallel runs.")
+end
+
+end
+
+% -------------------------------------------------------------------------
+%                             code run
+% -------------------------------------------------------------------------
+
+% -------------------------------------------------------------------------
+%                             PART I
+%                             CREATE AUTOMATIC LOOPS
+% -------------------------------------------------------------------------
+
+[TNew, TInit, TNext, TRestart] = setup_files(result_path, numLoops);
+[TNew, TInit, TNext, TRestart] = include_input_params(TNew, TInit, TNext, TRestart);
+[TNew, TInit, TNext, TRestart, TAll, result] = create_automatic_loops(TNew, TInit, TNext, TRestart, result_path, numLoops);
+write_automatic_loops(TAll, result, result_path);
+
+% -------------------------------------------------------------------------
+%                             PART II
+%                             RUN AUTOMATIC LOOPS
+% -------------------------------------------------------------------------
+
+diagnostic_run(TAll, source_path, init_format, constant_file, result_path, numLoops);
+
+% -------------------------------------------------------------------------
+%                             PART III
+%                             CREATE INDIVIDUAL LOOP RUNS
+% -------------------------------------------------------------------------
+
+TRun = create_template_loop_run(TAll, TRestart);
+write_individual_loop_folders(TRun, result_path, numLoops, init_format, constant_file, ext_dict);
 
 % -------------------------------------------------------------------------
 %                             PART IV
