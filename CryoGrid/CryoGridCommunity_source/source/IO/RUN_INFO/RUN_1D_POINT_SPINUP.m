@@ -20,6 +20,9 @@ classdef RUN_1D_POINT_SPINUP < matlab.mixin.Copyable
         CONST
         SPATIAL
         STATVAR
+        % NEW VP CODE STARTS HERE
+        TEMP
+        % NEW VP CODE ENDS HERE
     end
     
     
@@ -83,7 +86,17 @@ classdef RUN_1D_POINT_SPINUP < matlab.mixin.Copyable
                             new_tile.PARA.(fn{k,1}) = run_info.SPATIAL.STATVAR.(fn{k,1});
                         end
                     end
+
                     new_tile.RUN_INFO = run_info;
+                    
+                    % NEW VP CODE STARTS HERE
+                    new_tile.RUN_INFO.TEMP.spinup_index = j;
+                    new_tile.RUN_INFO.TEMP.tile_index = run_info.PARA.tile_class_index(i,1);
+                    new_tile.RUN_INFO.TEMP.spinup_total = run_info.PARA.number_of_runs_per_tile(i,1);
+                    % new_tile.RUN_INFO.TEMP.tile_index = i;
+                    % new_tile.RUN_INFO.TEMP.tile_index = run_info.PARA.tile_class_index(i,1);
+                    % NEW VP CODE ENDS HERE
+
                     new_tile = finalize_init(new_tile);
                     
                     tile = new_tile;
