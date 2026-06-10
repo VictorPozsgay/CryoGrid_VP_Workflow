@@ -1,21 +1,26 @@
-function [TNew, TInit, TNext, TRestart, TAll, result, dtEnd] = create_automatic_loops(TNew, TInit, TNext, TRestart, result_path, numLoops)
+function [TNew, TInit, TNext, TRestart, TAll, result, dictDtEnd] = create_automatic_loops(TNew, TInit, TNext, TRestart, result_path, numLoops)
 
 [~, folder_name] = fileparts(join_rel_path(result_path));
 
 TAll = TInit;
 
-mask = (TAll.sup == "FORCING");
-rowIdx = identifying_line_to_change(TAll.blocks{mask}, ...
-    "FORCING_seb_mat", 1, "end_time");
-time = TAll.blocks{mask}(rowIdx,:);
-iStart = find(string(time) == "H_LIST", 1);
-iEnd   = find(string(time) == "END", 1);
-vals = time(iStart+1:iEnd-1);
-dtEnd = datetime(vals{1}, vals{2}, vals{3});
-dtEnd = string(yyyymmdd(dtEnd));
+dictDtEnd = dictionary();
+
+mask = find((TAll.sup == "FORCING") & (TAll.cls == "FORCING_seb_mat"));
+for i = 1:numel(mask)
+    dtEnd = reading_line_block(TAll, "FORCING", "FORCING_seb_mat", TAll{mask(i),"idx"}, "end_time");
+    dictDtEnd(TAll{mask(i),"idx"}) = yyyymmdd(datetime(dtEnd{:}));
+end
+
 
 for n = 2:numLoops
     TNextTemp = TNext;
+
+    if n==2
+        dtEnd = dictDtEnd(1);
+    else
+        dtEnd = dictDtEnd(2);
+    end
 
     % First TILE with restart_OUT_last_timestep
     ops = struct([]);
@@ -36,25 +41,9 @@ for n = 2:numLoops
     ops(1).param = "TILE_1D";
     ops(1).value = 2*n-1;
 
-    % ops(2).param = "out_class_index";
-    % ops(2).value = {n};
-
     [TNextTemp, idxBlock] = modify_blocks(TNext, TNextTemp, false, ...
         "TILE", "TILE_1D", 3, ops);
     TNextTemp.idx(idxBlock) = 2*n-1;
-
-    % % Third TILE with OUT_last_timestep
-    % ops = struct([]);
-    % 
-    % ops(1).param = "OUT_last_timestep";
-    % ops(1).value = n;
-    % 
-    % ops(2).param = "tag";
-    % ops(2).value = "loop" + string(n);
-    % 
-    % [TNextTemp, idxBlock] = modify_blocks(TNext, TNextTemp, false, ...
-    %     "OUT", "OUT_last_timestep", 2, ops);
-    % TNextTemp.idx(idxBlock) = n;
 
     % Concatenate
     TAll = vertcat(TAll, TNextTemp);

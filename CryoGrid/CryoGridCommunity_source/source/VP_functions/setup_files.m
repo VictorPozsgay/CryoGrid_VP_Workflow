@@ -30,6 +30,13 @@ ops(1).value = result_path;
 [TNext, ~] = modify_blocks(TNext, TNext, false, ...
     "TILE", "TILE_1D", 2, ops);
 
+ops = struct([]);
+ops(1).param = "forcing_class_index";
+ops(1).value = 2;
+
+[TNext, ~] = modify_blocks(TNext, TNext, false, ...
+    "TILE", "TILE_1D", 3, ops);
+
 
 % Maximum width across all blocks
 maxCols = max([ ...

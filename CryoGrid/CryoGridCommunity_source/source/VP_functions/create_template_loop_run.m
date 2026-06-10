@@ -55,11 +55,14 @@ ops = struct([]);
 ops(1).param = "TILE_1D";
 ops(1).value = 2;
 
-ops(2).param = "out_class";
-ops(2).value = {"OUT_regridded","OUT_all_lateral","OUT_snow_all"};
+ops(2).param = "forcing_class_index";
+ops(2).value = 1;
 
-ops(3).param = "out_class_index";
-ops(3).value = {1,1,1};
+ops(3).param = "out_class";
+ops(3).value = {"OUT_regridded","OUT_all_lateral","OUT_snow_all"};
+
+ops(4).param = "out_class_index";
+ops(4).value = {1,1,1};
 
 [TRun, ~] = modify_blocks(TAll, TRun, i, ...
     "TILE", "TILE_1D", 3, ops);
