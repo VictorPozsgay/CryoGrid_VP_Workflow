@@ -1,4 +1,4 @@
-function new_diagnostic_run(TAll, lastFileExpected, TDates, lastStruct, source_path, init_format, constant_file, result_path)
+function new_diagnostic_run(TAll, lastFileExpected, TDates, lastStruct, source_path, result_path)
 
 allExist = all(arrayfun(@(i) isfolder(join_rel_path(result_path,sprintf('loop%d', i))), 0:height(TDates)-1));
 
@@ -74,6 +74,7 @@ else
             ops(1).param = "FORCING_seb_mat";
             ops(1).value = max_forcing_index+1;
             ops(2).param = "start_time";
+            lastDate = datetime(lastDate, 'ConvertFrom', 'yyyymmdd');
             ops(2).value = {lastDate.Year, lastDate.Month, lastDate.Day};
             [Tf, ~] = modify_blocks(TAll, Tf, 1, ...
                 "FORCING", "FORCING_seb_mat", vals{1}, ops);
@@ -93,6 +94,8 @@ else
         end
     end
     [~, folder_name] = fileparts(join_rel_path(result_path));
+    init_format = 'EXCEL3D'; % choose the option corresponding to the parameter file format
+    constant_file = 'CONSTANTS_excel'; %filename of file storing constants
     run_CG(source_path, init_format, folder_name, ...
         extractBefore(result_path, folder_name), constant_file)
 end

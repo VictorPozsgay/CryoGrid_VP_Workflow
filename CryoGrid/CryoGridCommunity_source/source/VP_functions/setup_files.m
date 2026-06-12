@@ -1,14 +1,14 @@
-function [TNew, TInit, TNext, TRestart] = setup_files(result_path, numLoops)
+function [TNew, TInit, TNext, TRestart] = setup_files(result_path, TNew, GenParamsStruct)
 
-newParams = format_template(result_path,'NEW_PARAMS','.xlsx');
 init = format_template(result_path,'TILE_LOOP_INIT','.xlsx');
 next = format_template(result_path,'TILE_LOOP_NEXT','.xlsx');
 restart = format_template(result_path,'RESTART','.xlsx');
 
-TNew = cut_into_blocks(newParams);
 TInit = cut_into_blocks(init);
 TNext = cut_into_blocks(next);
 TRestart = cut_into_blocks(restart);
+
+numLoops = GenParamsStruct.num_loops + 1;
 
 ops = struct([]);
 ops(1).param = "tile_class";

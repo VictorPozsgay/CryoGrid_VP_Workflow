@@ -1,4 +1,4 @@
-function new_write_individual_loop_folders(TRun, TDates, result_path, init_format, constant_file, ext_dict)
+function new_write_individual_loop_folders(TRun, TDates, result_path)
 
 allExist = all(arrayfun(@(i) isfolder(join_rel_path(result_path,sprintf('loop%d', i))), 0:height(TDates)-1));
 
@@ -35,8 +35,9 @@ if ~allExist
             end
         end
         writecell(run, path_out)
-    
-        copyfile(join_rel_path(result_path,constant_file,ext_dict(init_format)),folder)
+        
+        constant_file = 'CONSTANTS_excel'; %filename of file storing constants
+        copyfile(join_rel_path(result_path,constant_file,'.xlsx'),folder)
         
         [~, folder_name] = fileparts(join_rel_path(result_path));
         pattern = sprintf('*%s_tile%d_*.mat', folder_name, 2*loopIdx+1);

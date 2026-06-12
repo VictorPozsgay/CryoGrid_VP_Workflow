@@ -1,4 +1,4 @@
-function TRun = create_template_loop_run(TAll, TRestart)
+function TRun = create_template_loop_run(TAll, TNext, TRestart)
 
 n = 9;
 TRun = table(strings(n,1), strings(n,1), zeros(n,1), cell(n,1), ...
@@ -41,7 +41,7 @@ ops = struct([]);
 ops(1).param = "TILE_1D";
 ops(1).value = 1;
 
-[TRun, ~] = modify_blocks(TAll, TRun, i, ...
+[TRun, ~] = modify_blocks(TNext, TRun, i, ...
     "TILE", "TILE_1D", 2, ops);
 TRun.sup(i) = "TILE";
 TRun.cls(i) = "TILE_1D";
@@ -64,7 +64,7 @@ ops(3).value = {"OUT_regridded","OUT_all_lateral","OUT_snow_all"};
 ops(4).param = "out_class_index";
 ops(4).value = {1,1,1};
 
-[TRun, ~] = modify_blocks(TAll, TRun, i, ...
+[TRun, ~] = modify_blocks(TNext, TRun, i, ...
     "TILE", "TILE_1D", 3, ops);
 TRun.sup(i) = "TILE";
 TRun.cls(i) = "TILE_1D";

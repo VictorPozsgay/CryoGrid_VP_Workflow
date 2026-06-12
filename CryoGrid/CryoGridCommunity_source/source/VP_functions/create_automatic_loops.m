@@ -1,5 +1,6 @@
-function [TNew, TInit, TNext, TRestart, TAll, result, dictDtEnd] = create_automatic_loops(TNew, TInit, TNext, TRestart, result_path, numLoops)
+function [TNew, TInit, TNext, TRestart, TAll, result, dictDtEnd] = create_automatic_loops(TNew, TInit, TNext, TRestart, result_path, GenParamsStruct)
 
+numLoops = GenParamsStruct.num_loops + 1;
 [~, folder_name] = fileparts(join_rel_path(result_path));
 
 TAll = TInit;

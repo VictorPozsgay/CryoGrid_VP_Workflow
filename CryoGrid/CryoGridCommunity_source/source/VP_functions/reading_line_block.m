@@ -23,5 +23,4 @@ else
     vals = line(1);
 end
 
-
 end
