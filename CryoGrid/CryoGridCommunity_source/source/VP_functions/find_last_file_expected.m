@@ -1,27 +1,47 @@
-function [lastFile, TDates] = find_last_file_expected(result_path, TIn)
+function expected = find_last_file_expected(providerInit)
+%FIND_LAST_FILE_EXPECTED  Construct expected CryoGrid output file list
+%
+% This function generates the list of expected "_last_timestep" output file
+% names based on the PROVIDER configuration. Each file corresponds to one
+% tile-run combination and its associated forcing end time.
+%
+%
+% INPUT
+% -----
+% providerInit   (PROVIDER)
+%     CryoGrid PROVIDER object containing TILE and FORCING configuration.
+%
+%
+% OUTPUT
+% ------
+% expected       (string array)
+%     Expected output filenames in tile AND chronological order:
+%       <run_name>_tile<k>_run<r>_<YYYYMMDD>_last_timestep
+%
+%
+% DESCRIPTION
+% -----------
+% The function:
+%   - Iterates over RUN_INFO_CLASS tile definitions
+%   - Extracts tile indices and run indices
+%   - Retrieves forcing end_time for each tile
+%   - Converts end_time to YYYYMMDD format
+%   - Constructs expected output filenames
+%
+% These filenames are later compared to actual simulation outputs to detect
+% completion status.
+%
 
-[~, folder_name] = fileparts(join_rel_path(result_path));
+expected = strings(0,1);
 
-mask = (TIn.sup == "TILE") & (TIn.cls == "TILE_1D");
-idxs = num2cell(TIn{mask,'idx'})';
-
-lastFile = '';
-TDates = table('Size',[0 4], ...
-    'VariableTypes', {'double','double','double','string'}, ...
-    'VariableNames', {'tile','run','endDate','lastFile'});
-
-for i = 1:numel(idxs)
-    idx = idxs{i};
-    vals = reading_line_block(TIn, "TILE", "TILE_1D", idx, "out_class");
-    out = any(cellfun(@(x) isstring(x) && any(x == "OUT_last_timestep"), vals));
-    if out
-        vals = reading_line_block(TIn, "TILE", "TILE_1D", idx, "forcing_class_index");
-        endTime = reading_line_block(TIn, "FORCING", "FORCING_seb_mat", vals{1}, "end_time");
-        endTime = yyyymmdd(datetime(endTime{:}));
-        vals = reading_line_block(TIn, "RUN_INFO", "RUN_1D_POINT_SPINUP", 1, "number_of_runs_per_tile");
-        nRun = vals{i};
-        lastFile = sprintf("%s_tile%d_run%d_%d_last_timestep", folder_name, idx, nRun, endTime);
-        TDates(end+1,:) = {idx, nRun, endTime, lastFile};
+for i = 1:size(providerInit.RUN_INFO_CLASS.PARA.tile_class,1)
+    nTiles = providerInit.RUN_INFO_CLASS.PARA.tile_class_index(i,1);
+    nRuns = providerInit.RUN_INFO_CLASS.PARA.number_of_runs_per_tile(i,1);
+    idxForcing = providerInit.CLASSES.TILE_1D{i,1}.PARA.forcing_class_index;
+    if ~isequal(idxForcing,[])
+        endTime = providerInit.CLASSES.FORCING_seb_mat{idxForcing,1}.PARA.end_time;
+        endTime = yyyymmdd(datetime(endTime'));
+        expected(end+1,1) = sprintf("%s_tile%d_run%d_%d_last_timestep", providerInit.PARA.run_name, nTiles, nRuns, endTime);
     end
 end
 

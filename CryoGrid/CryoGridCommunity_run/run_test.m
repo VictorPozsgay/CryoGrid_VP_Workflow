@@ -27,108 +27,128 @@ numLoops = 5;
 % add source code path
 addpath(genpath(source_path));
 
-%create and load PROVIDER
-providerNew = PROVIDER;
-providerNew = assign_paths(providerNew, init_format, run_name, result_path, constant_file);
-providerNew.PARA.parameter_file = [result_path run_name '\' 'NEW_PARAMS2.xlsx'];
-providerNew = read_const(providerNew);
-providerNew = read_parameters(providerNew);
+providerInit = create_model_loops(init_format, run_name, result_path, source_path, constant_file, numLoops);
+[providerInit, runBool] = checkpoint_manager(providerInit, result_path, run_name);
 
-%create and load PROVIDER
-providerInit = PROVIDER;
-providerInit = assign_paths(providerInit, init_format, run_name, result_path, constant_file);
-providerInit.PARA.parameter_file = [result_path run_name '\' 'TILE_LOOP_INIT.xlsx'];
-providerInit = read_const(providerInit);
-providerInit = read_parameters(providerInit);
-
-%create and load PROVIDER
-providerNext = PROVIDER;
-providerNext = assign_paths(providerNext, init_format, run_name, result_path, constant_file);
-providerNext.PARA.parameter_file = [result_path run_name '\' 'TILE_LOOP_NEXT.xlsx'];
-providerNext = read_const(providerNext);
-providerNext = read_parameters(providerNext);
-
-
-
-% %%%%%%%%%%%%%%%%%
-
-initTiles = providerInit.CLASSES.TILE_1D(~cellfun(@isempty, providerInit.CLASSES.TILE_1D));
-nextTiles = providerNext.CLASSES.TILE_1D(~cellfun(@isempty, providerNext.CLASSES.TILE_1D));
-nextTiles = nextTiles(:);  % ensure column
-repNext = cell(numel(nextTiles)*numLoops, 1);
-k = 1;
-for i = 1:numLoops
-    for j = 1:numel(nextTiles)
-        repNext{k} = copy(nextTiles{j});
-        k = k + 1;
-    end
+if runBool
+    % create RUN_INFO class
+    [run_info, providerInit] = run_model(providerInit);
+    % run model
+    [run_info, tile] = run_model(run_info);
 end
-providerInit.CLASSES.TILE_1D = [initTiles; repNext];
-
-% providerInit.CLASSES.TILE_1D = [providerInit.CLASSES.TILE_1D(~cellfun(@isempty,providerInit.CLASSES.TILE_1D)); ...
-%     repmat(providerNext.CLASSES.TILE_1D(~cellfun(@isempty,providerNext.CLASSES.TILE_1D)),numLoops,1)];
-
-providerInit.CLASSES.RUN_1D_POINT_SPINUP{1,1}.PARA.tile_class = cellfun(@class, providerInit.CLASSES.TILE_1D, ...
-    'UniformOutput', false);
-
-providerInit.CLASSES.RUN_1D_POINT_SPINUP{1,1}.PARA.tile_class_index = transpose(1:size(providerInit.CLASSES.RUN_1D_POINT_SPINUP{1,1}.PARA.tile_class,1));
-providerInit.CLASSES.RUN_1D_POINT_SPINUP{1,1}.PARA.number_of_runs_per_tile = ones(size(providerInit.CLASSES.RUN_1D_POINT_SPINUP{1,1}.PARA.tile_class,1),1);
 
 
-%%%%%%%%%%%%%%%%%
-% identify classes with new parameters
-cls = fieldnames(providerNew.CLASSES);
-for i = 1:size(cls,1)
-    c = cls{i}; % class c to modify, might be multiple iterations of the same class
-    class_func = str2func(c);
-    new_class = class_func();
-    new_class = provide_PARA(new_class); % checks format of default class c
-    for j = 1:size(providerNew.CLASSES.(c),1)
-        if any(string(c) == ["GRID_user_defined", "STRAT_classes", "STRAT_layers", "STRAT_linear"])
-            providerInit.CLASSES.(c){j,1} = copy(providerNew.CLASSES.(c){j,1});
-        else
-            % find all parameters to modify in class c, tile j, that are
-            % different from default value
-            pars = fieldnames(new_class.PARA);
-            modpars = pars(cellfun(@(f) isfield(providerNew.CLASSES.(c){j,1}.PARA,f) && ~isequal(providerNew.CLASSES.(c){j,1}.PARA.(f), new_class.PARA.(f)), pars));
-            for k = 1:size(modpars,1) % find all (param,value) to change
-                p = modpars{k};
-                v = providerNew.CLASSES.(c){j,1}.PARA.(p);
-                if (isfield(providerInit.CLASSES, c)) && (size(providerInit.CLASSES.(c),1)>=j) && (isfield(providerInit.CLASSES.(c){j,1}.PARA, p))
-                    providerInit.CLASSES.(c){j,1}.PARA.(p) = v;
-                end
-            end
+
+% toc
+
+function providerInit = initiate_restart_provider(init_format, run_name, result_path, source_path, constant_file)
+%create and load PROVIDER for the initial loop
+providerNew = construct_provider(init_format, run_name, result_path, constant_file, 'NEW_PARAMS');
+providerRestart = construct_provider(init_format, run_name, result_path, constant_file, 'RESTART');
+providerRestart = modify_parameters(providerRestart, providerNew);
+
+providerInit = create_model_loops(init_format, run_name, result_path, source_path, constant_file, 1);
+providerInit = shift_to_next_tile(providerInit, 1);
+
+fns = fieldnames(providerRestart.CLASSES);
+fns = fns(contains(fns, 'OUT_'));
+for i = 1:size(fns,1)
+    f = fns{i};
+    providerInit.CLASSES.(f) = providerRestart.CLASSES.(f);
+end
+
+providerInit.CLASSES.TILE_1D{3,1}.PARA.out_class = fns;
+providerInit.CLASSES.TILE_1D{3,1}.PARA.out_class_index = ones(size(fns,1),1);
+providerInit.CLASSES.TILE_1D{3,1}.PARA.forcing_class_index = 1;
+
+end
+
+providerInit = initiate_restart_provider(init_format, run_name, result_path, source_path, constant_file);
+
+function write_individual_loop_folders(numLoops, providerInit)
+
+result_path = string(providerInit.PARA.result_path);
+run_name = string(providerInit.PARA.run_name);
+constant_file = string(providerInit.PARA.constant_file);
+
+for n = 0:numLoops
+    folder = result_path + run_name + "\loop" + string(n);
+    if ~exist(folder, 'dir')
+        mkdir(folder);
+    end
+
+    idxForcing = 1;
+    if n > 0
+        idxForcing = 2;
+    end
+
+    endTime = providerInit.CLASSES.FORCING_seb_mat{idxForcing,1}.PARA.end_time;
+    endTime = string(datetime(endTime','Format','yyyyMMdd'));
+    file = sprintf("%s_tile%d_run1_%s_last_timestep", run_name, 2*n+1, endTime);
+
+    % Write to Excel
+    path_out = [folder "loop" string(2*n+1) '.xlsx'];
+    if isfile(path_out)
+        try
+            delete(path_out);
+        catch
+            warning("Could not delete file: %s", path_out);
         end
     end
+
+    copyfile(constant_file,folder)
+    copyfile(result_path+run_name+"\"+file+".mat",folder+"\"+run_name+"_loop"+n+".mat")
+    % movefile(result_path+run_name+"\"+file+".mat",folder)
 end
 
-%%%%%%%%%%%%%%%%%
+end
 
-forc = providerInit.CLASSES.FORCING_seb_mat(~cellfun(@isempty,providerInit.CLASSES.FORCING_seb_mat));
-providerInit.CLASSES.FORCING_seb_mat = {forc{1,1}; copy(forc{1,1})};
+write_individual_loop_folders(numLoops, providerInit)
 
-endTime = datetime(providerInit.CLASSES.FORCING_seb_mat{1,1}.PARA.start_time','Format','yyyyMMdd') + days(1);
-providerInit.CLASSES.FORCING_seb_mat{1,1}.PARA.end_time = [endTime.Year; endTime.Month; endTime.Day];
 
-for j = 1:size(providerInit.CLASSES.TILE_1D,1)
-    if j >= 2
-        if rem(j, 2) == 0 % even
-            idx = 1;
-            if j > 2
-                idx = 2;
-            end
-            endTime = string(datetime(providerInit.CLASSES.FORCING_seb_mat{idx,1}.PARA.end_time','Format','yyyyMMdd'));
-            providerInit.CLASSES.TILE_1D{j,1}.PARA.restart_file_path = [result_path run_name '\'];
-            providerInit.CLASSES.TILE_1D{j,1}.PARA.restart_file_name = sprintf('%s_tile%d_run1_%s_last_timestep',run_name,j-1,endTime);
-        else % odd
-        end
-    end
+function run_CG_parallel(numLoops, providerInit)
+
+result_path = string(providerInit.PARA.result_path);
+folder_name = string(providerInit.PARA.run_name);
+run_names = arrayfun(@(k) sprintf('loop%d', k), 0:numLoops, 'UniformOutput', false)';
+
+% % add source code path
+% addpath(genpath(source_path));
+
+%% --- Parallel pool
+delete(gcp('nocreate'))
+nWorkers = length(run_names);   % 1 node per run
+nWorkers = min(nWorkers, parcluster('local').NumWorkers);
+parpool('local', nWorkers);
+
+%% --- Running parallel jobs
+parfor i = 1:numel(run_names)
+    r = run_names{i};
+    folder = result_path + folder_name + "\" + r + "\";
+
+    fprintf('--- Running %s on worker %d ---\n', r, getCurrentTask().ID);
+
+    % PROVIDER local (important)
+    providerLoop = providerInit;
+    providerLoop.CLASSES.TILE_1D{2,1} = copy(providerInit.CLASSES.TILE_1D{2,1});
+    providerLoop.CLASSES.TILE_1D{2,1}.PARA.restart_file_path = char(folder);
+    providerLoop.CLASSES.TILE_1D{2,1}.PARA.restart_file_name = char(folder_name+"_"+r);
+
+    % providerLoop.PARA = copy(providerInit.PARA);
+    providerLoop.PARA.run_name = char(r);
+    providerLoop.PARA.result_path = char(result_path + folder_name + "\");
+
+
+    % Run CryoGrid
+    [run_info, ~] = run_model(providerLoop);
+    [~, ~] = run_model(run_info);
+
+    fprintf('--- End %s ---\n', r);
+end
+
+delete(gcp('nocreate'))
+
 end
 
 
-% create RUN_INFO class
-[run_info, providerInit] = run_model(providerInit);
-% run model
-[run_info, tile] = run_model(run_info);
-
-toc
+run_CG_parallel(numLoops, providerInit)
