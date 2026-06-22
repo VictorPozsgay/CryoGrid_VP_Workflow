@@ -2,13 +2,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%% Begin user-modified part %%%%%%%%%%%%%%%%%%%%%%%%%
 
 init_format = 'EXCEL3D'; % choose the option corresponding to the parameter file format
-result_path = '..\CryoGridCommunity_results\templates\';
+result_path = '..\CryoGridCommunity_results\TEST\';
 source_path = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
 
-run_name = 'restart_broken'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
+run_name = 'spinup_loops_minus2'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
 
-numLoops = 2;
+numLoops = 10;
 
 %%%%%%%%%%%%%%%%%%%%%%%% end user-modified part %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
