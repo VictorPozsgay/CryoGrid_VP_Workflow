@@ -1,4 +1,4 @@
-function [providerInit, runBool] = checkpoint_manager(providerInit, result_path, run_name)
+function [providerInit, runBool] = checkpoint_manager(providerInit, result_path, run_name, restart_from_within)
 %CHECKPOINT_MANAGER  Automatic restart handler for CryoGrid simulations
 %
 % This function inspects existing simulation outputs and automatically
@@ -16,15 +16,20 @@ function [providerInit, runBool] = checkpoint_manager(providerInit, result_path,
 %
 % INPUTS
 % ------
-% providerInit  (PROVIDER)
+% providerInit        (PROVIDER)
 %     Fully initialized CryoGrid PROVIDER object.
 %
-% result_path   (char|string)
+% result_path         (char|string)
 %     Path to simulation output directory.
 %
-% run_name      (char|string)
+% run_name            (char|string)
 %     Simulation name (folder + file prefix).
 %
+% restart_from_within (bool)
+%     Can be left empty, in which case the parameter is set to True.
+%     If true, allows restart from within broken tile.
+%     If false, only restart from last completed tile.
+% 
 %
 % OUTPUTS
 % -------
@@ -53,6 +58,10 @@ function [providerInit, runBool] = checkpoint_manager(providerInit, result_path,
 % find_last_file_expected, find_last_file_out_last_timestep
 %
 
+if nargin < 4 || isempty(restart_from_within)
+    restart_from_within = true;
+end
+
 expected = find_last_file_expected(providerInit);
 lastInfo = find_last_file_out_last_timestep(result_path, run_name);
 
@@ -65,10 +74,20 @@ if strcmp(lastInfo.lastFile,"")
 end
 
 % CASE 1: simulation complete
-if strcmp(lastInfo.lastFile, expected(end))
+if strcmp(lastInfo.lastFile, expected(end)) || lastInfo.lastTile > providerInit.RUN_INFO_CLASS.PARA.tile_class_index(end)
     disp('Simulation successfully completed.');
     runBool = false;
     return;
+end
+
+% if we do not want to restart within a tile, we find the last completed one
+if ~ismember(lastInfo.lastFile, expected) && ~restart_from_within
+    tiles_w_out = cellfun(@(s) str2double(regexp(s, 'tile(\d+)', 'tokens', 'once')), expected);
+    idx = find([tiles_w_out(:)] == lastInfo.lastTile);
+    lastInfo.lastFile = expected{idx - 1};
+    date = cellfun(@(s) str2double(regexp(s, '_(\d+)_last_timestep', 'tokens', 'once')), expected);
+    lastInfo.lastTile = tiles_w_out(idx - 1);
+    lastInfo.lastDate = date(idx - 1);
 end
 
 % locate tile index in RUN_INFO
