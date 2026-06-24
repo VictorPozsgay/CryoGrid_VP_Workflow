@@ -7,6 +7,7 @@ codegen/
 *.mex*
 *.p
 *.fig
+*.gz
 
 # MATLAB data
 # *.mat
@@ -24,3 +25,4 @@ Thumbs.db
 run_examples/
 data/
 literature/
+forcing/Forcing_Data

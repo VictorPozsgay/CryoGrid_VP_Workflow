@@ -72,7 +72,7 @@ endTime = providerNew.CLASSES.FORCING_seb_mat{1,1}.PARA.end_time;
 start_dt = datetime(startTime','Format','yyyyMMdd');
 end_dt   = datetime(endTime','Format','yyyyMMdd');
 
-end_time_new_dt = min(start_dt + calyears(10) - days(1), end_dt);
+end_time_new_dt = min(start_dt + calyears(30) - days(1), end_dt);
 end_time_new = [end_time_new_dt.Year; end_time_new_dt.Month; end_time_new_dt.Day];
 
 for i = 1:size(providerInit.CLASSES.FORCING_seb_mat,1)-1

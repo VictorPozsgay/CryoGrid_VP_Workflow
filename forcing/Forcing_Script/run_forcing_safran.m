@@ -2,10 +2,11 @@ function run_forcing_safran(massif_nume, eleva, capteur_name)
 
 
 %% PARAMÈTRES
-addpath(genpath('/Users/maximefadel/Documents/Stage_Edytem/Tristan_Forcage/')) % chemin du code
-nc_data_folder = '/Users/maximefadel/Documents/Stage_Edytem/Tristan_Forcage/meteo'; % dossier netCDF
+addpath(genpath('D:\Utilisateurs\pozsgayv\Documents\CryoGrid_VP_Workflow\forcing\Forcing_Script')) % chemin du code
+nc_data_folder = 'D:\Utilisateurs\pozsgayv\Documents\CryoGrid_VP_Workflow\forcing\Forcing_Data\meteo\safran'; % dossier netCDF
 table_out_folder = '/Users/maximefadel/Documents/Stage_Edytem/Tristan_Forcage/Donnes_Forcage'; % sortie tables
 
+\Forcing_Script\main_autom.m
 % files_list = dir([nc_data_folder '*.nc']); pour l'i
 
 files_list = [
