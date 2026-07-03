@@ -2,7 +2,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%% Begin user-modified part %%%%%%%%%%%%%%%%%%%%%%%%%
 
 init_format = 'EXCEL3D'; % choose the option corresponding to the parameter file format
-result_path = '..\CryoGridCommunity_results\TEST\';
+result_path = '..\CryoGridCommunity_results\templates\';
 source_path = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
 

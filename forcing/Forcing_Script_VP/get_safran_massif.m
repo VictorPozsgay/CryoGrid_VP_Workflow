@@ -1,4 +1,4 @@
-function [massif_id, massif_name] = get_safran_massif(shapefile_path, lat, lon)
+function [massif_id, massif_name] = get_safran_massif(safran_path, lat, lon)
 %GET_SAFRAN_MASSIF  Identify the SAFRAN massif containing a geographic point
 %
 % This function determines which SAFRAN massif polygon contains a given
@@ -16,8 +16,9 @@ function [massif_id, massif_name] = get_safran_massif(shapefile_path, lat, lon)
 %
 % INPUTS
 % ------
-% shapefile_path  (char|string)
-%     Path to the SAFRAN massif shapefile (*.shp).
+% safran_path     (char|string)
+%     Path to the SAFRAN folder, where a shapefile/ subfolder containing
+%     the massif shapefile (*.shp) are located
 %
 % lat             (double)
 %     Latitude of the point in decimal degrees (WGS84).
@@ -70,6 +71,8 @@ function [massif_id, massif_name] = get_safran_massif(shapefile_path, lat, lon)
 % SEE ALSO
 % --------
 % shaperead, projcrs, projfwd, inpolygon
+
+shapefile_path = fullfile(safran_path, "shapefile\", "massifs_alpes_2154.shp");
 
 persistent S_cached cached_path crsL93
 

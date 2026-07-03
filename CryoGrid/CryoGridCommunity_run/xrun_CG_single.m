@@ -11,7 +11,7 @@ result_path = '..\CryoGridCommunity_results\templates\';
 source_path = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
 
-run_name = 'automatic_loops'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
+run_name = 'transect'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
 %run_name = 'CG_EXAMPLE_sensitivity_test'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
 
 
@@ -35,5 +35,5 @@ provider = read_parameters(provider);
  [run_info, provider] = run_model(provider);
 % run model
  [run_info, tile] = run_model(run_info);
- 
-toc
+
+% toc

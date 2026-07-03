@@ -36,12 +36,13 @@ expected = strings(0,1);
 
 for i = 1:size(providerInit.RUN_INFO_CLASS.PARA.tile_class,1)
     nTiles = providerInit.RUN_INFO_CLASS.PARA.tile_class_index(i,1);
-    nRuns = providerInit.RUN_INFO_CLASS.PARA.number_of_runs_per_tile(i,1);
+    % nRuns = providerInit.RUN_INFO_CLASS.PARA.number_of_runs_per_tile(i,1);
     idxForcing = providerInit.CLASSES.TILE_1D{i,1}.PARA.forcing_class_index;
     if ~isequal(idxForcing,[])
         endTime = providerInit.CLASSES.FORCING_seb_mat{idxForcing,1}.PARA.end_time;
         endTime = yyyymmdd(datetime(endTime'));
-        expected(end+1,1) = sprintf("%s_tile%d_run%d_%d_last_timestep", providerInit.PARA.run_name, nTiles, nRuns, endTime);
+        % expected(end+1,1) = sprintf("%s_tile%d_run%d_%d_last_timestep", providerInit.PARA.run_name, nTiles, nRuns, endTime);
+        expected(end+1,1) = sprintf("%s_tile%d_%d_last_timestep", providerInit.PARA.run_name, nTiles, endTime);
     end
 end
 

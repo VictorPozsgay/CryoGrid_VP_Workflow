@@ -86,5 +86,6 @@ providerInit.CLASSES.INIT_TTOP_from_forcing{1,1}.PARA.end_time = end_time_new;
 endTime = string(datetime(providerInit.CLASSES.FORCING_seb_mat{1,1}.PARA.end_time','Format','yyyyMMdd'));
 for i = [2, 5]
     providerInit.CLASSES.TILE_1D{i,1}.PARA.restart_file_path = [result_path run_name '\'];
-    providerInit.CLASSES.TILE_1D{i,1}.PARA.restart_file_name = sprintf('%s_tile%d_run1_%s_last_timestep',run_name,i-1,endTime);
+    % providerInit.CLASSES.TILE_1D{i,1}.PARA.restart_file_name = sprintf('%s_tile%d_run1_%s_last_timestep',run_name,i-1,endTime);
+    providerInit.CLASSES.TILE_1D{i,1}.PARA.restart_file_name = sprintf('%s_tile%d_%s_last_timestep',run_name,i-1,endTime);
 end

@@ -46,12 +46,14 @@ function lastInfo = find_last_file_out_last_timestep(result_path, run_name)
 % find last file
 files = dir(fullfile(result_path, run_name, '*_last_timestep.mat*'));
 
-lastInfo = struct("lastFile", "", "lastTile", 1, "lastRun", 1, "lastDate", 0);
+% lastInfo = struct("lastFile", "", "lastTile", 1, "lastRun", 1, "lastDate", 0);
+lastInfo = struct("lastFile", "", "lastTile", 1, "lastDate", 0);
 
 if ~isempty(files)
     names = {files.name};
 
-    pattern = '.*tile(\d+)_run(\d+)_(\d+)_last_timestep.mat';
+    % pattern = '.*tile(\d+)_run(\d+)_(\d+)_last_timestep.mat';
+    pattern = '.*tile(\d+)_(\d+)_last_timestep.mat';
 
     tok = regexp(names, pattern, 'tokens');
 
@@ -63,15 +65,16 @@ if ~isempty(files)
     nums = cellfun(@(t) str2double(t{1}), tok, 'UniformOutput', false);
     nums = vertcat(nums{:});
 
-    % lexicographic sort: tile → run → date
-    [~, idx] = sortrows(nums, [1 2 3]);
+    % lexicographic sort: tile → run → date (OLD)
+    % lexicographic sort: tile → date
+    [~, idx] = sortrows(nums, [1 2]);
 
     lastIdx = idx(end);
 
     [~, lastInfo.lastFile] = fileparts(names{lastIdx});
     lastInfo.lastTile = nums(lastIdx, 1);
-    lastInfo.lastRun  = nums(lastIdx, 2);
-    lastInfo.lastDate = nums(lastIdx, 3);
+    % lastInfo.lastRun  = nums(lastIdx, 2);
+    lastInfo.lastDate = nums(lastIdx, 2);
 
 end
 

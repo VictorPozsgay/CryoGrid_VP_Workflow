@@ -75,7 +75,8 @@ for n = 0:numLoops
 
     endTime = providerInit.CLASSES.FORCING_seb_mat{idxForcing,1}.PARA.end_time;
     endTime = string(datetime(endTime','Format','yyyyMMdd'));
-    file = sprintf("%s_tile%d_run1_%s_last_timestep", run_name, 2*n+1, endTime);
+    % file = sprintf("%s_tile%d_run1_%s_last_timestep", run_name, 2*n+1, endTime);
+    file = sprintf("%s_tile%d_%s_last_timestep", run_name, 2*n+1, endTime);
 
     % Write to Excel
     path_out = [folder new_run_name '.xlsx'];
