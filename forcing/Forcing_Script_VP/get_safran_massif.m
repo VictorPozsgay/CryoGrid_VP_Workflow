@@ -3,11 +3,10 @@ function [massif_id, massif_name] = get_safran_massif(safran_path, lat, lon)
 %
 % This function determines which SAFRAN massif polygon contains a given
 % latitude/longitude coordinate.
-%
-% The input coordinates are assumed to be expressed in geographic
-% coordinates (WGS84; EPSG:4326). They are internally projected to
-% Lambert-93 (EPSG:2154), which is the native coordinate reference system
-% used by SAFRAN massif shapefiles distributed by Météo-France.
+% 
+% Input coordinates are WGS84 (latitude/longitude).
+% The SAFRAN polygons (stored in Lambert-93) are converted once to WGS84
+% when the shapefile is first loaded.
 %
 % For efficiency, the shapefile is loaded only once and stored in memory
 % using a persistent variable. Subsequent calls using the same shapefile
@@ -40,24 +39,6 @@ function [massif_id, massif_name] = get_safran_massif(safran_path, lat, lon)
 %     Returns an empty string if the point does not belong to any polygon.
 %
 %
-% OVERVIEW
-% --------
-% 1. Load SAFRAN massif polygons (only once)
-% 2. Convert input coordinates from WGS84 to Lambert-93
-% 3. Test whether projected point falls inside each polygon
-% 4. Return corresponding massif attributes
-%
-%
-% PERFORMANCE
-% -----------
-% The shapefile is cached in memory using persistent variables.
-% If the function is called repeatedly with the same shapefile, disk access
-% occurs only during the first call.
-%
-% If a different shapefile path is provided, the cache is automatically
-% refreshed.
-%
-%
 % ASSUMPTIONS
 % -----------
 % - The shapefile geometry is expressed in Lambert-93 (EPSG:2154).
@@ -72,39 +53,59 @@ function [massif_id, massif_name] = get_safran_massif(safran_path, lat, lon)
 % --------
 % shaperead, projcrs, projfwd, inpolygon
 
-shapefile_path = fullfile(safran_path, "shapefile\", "massifs_alpes_2154.shp");
+shapefile_path = fullfile(safran_path,"shapefile","massifs_alpes_2154.shp");
 
-persistent S_cached cached_path crsL93
+persistent S_cached cached_path
 
-% Load shapefile only if necessary
+% -------------------------------------------------------------------------
+% Load and project shapefile only once
+% -------------------------------------------------------------------------
 if isempty(S_cached) || ~strcmp(string(shapefile_path), cached_path)
 
     S_cached = shaperead(shapefile_path);
     cached_path = string(shapefile_path);
 
-    % Create projection object once
     crsL93 = projcrs(2154);
+
+    % Convert every polygon from Lambert-93 to WGS84
+    for k = 1:numel(S_cached)
+
+        valid = ~isnan(S_cached(k).X) & ~isnan(S_cached(k).Y);
+
+        lon_poly = nan(size(S_cached(k).X));
+        lat_poly = nan(size(S_cached(k).Y));
+
+        [lat_poly(valid), lon_poly(valid)] = ...
+            projinv(crsL93, ...
+                    S_cached(k).X(valid), ...
+                    S_cached(k).Y(valid));
+
+        S_cached(k).Lon = lon_poly;
+        S_cached(k).Lat = lat_poly;
+
+    end
 
 end
 
-% Convert WGS84 coordinates to Lambert-93
-[x, y] = projfwd(crsL93, lat, lon);
-
+% -------------------------------------------------------------------------
 % Default outputs
+% -------------------------------------------------------------------------
 massif_id = NaN;
 massif_name = "";
 
+% -------------------------------------------------------------------------
 % Search containing polygon
-for k = 1:length(S_cached)
+% -------------------------------------------------------------------------
+for k = 1:numel(S_cached)
 
-    in = inpolygon(x, y, ...
-                   S_cached(k).X, ...
-                   S_cached(k).Y);
+    if inpolygon(lon, lat, ...
+                 S_cached(k).Lon, ...
+                 S_cached(k).Lat)
 
-    if in
         massif_id = S_cached(k).massif_num;
         massif_name = string(S_cached(k).nom);
         return
+
     end
 
 end

@@ -34,7 +34,11 @@ function S = safran_massif_to_coord(safran_path)
 
 shapefile_path = fullfile(safran_path, "shapefile\", "massifs_alpes_2154.shp");
 
+
+% !!!!!!!!!!!!! NEED TO CONVERT TO WGS84 !!!!!!!!!!
 SIn = shaperead(shapefile_path);
+SIn = rmfield(SIn,{'Geometry', 'BoundingBox', 'superficie', 'perimetre'});
+
 folder_safran_raw = fullfile(safran_path, "raw\");
 files = dir(fullfile(folder_safran_raw, "*.nc"));
 if isempty(files)
@@ -48,17 +52,31 @@ lat = ncread(forcing_file,'LAT');
 
 T1 = unique(table(massif_num, lat, lon));
 
-
-massif_num = [SIn.massif_num]';
-nom        = string({SIn.nom})';
-nom_reduit = string({SIn.nom_reduit})';
-
-T2 = table(massif_num, nom, nom_reduit);
+T2 = struct2table(SIn);
 
 T = innerjoin(T1, T2, 'Keys', 'massif_num');
 T = sortrows(T,"massif_num");
 
 S = table2struct(T);
+
+% Convert every polygon from Lambert-93 to WGS84
+crsL93 = projcrs(2154);
+for k = 1:numel(S)
+
+    valid = ~isnan(S(k).X) & ~isnan(S(k).Y);
+
+    lon_poly = nan(size(S(k).X));
+    lat_poly = nan(size(S(k).Y));
+
+    [lat_poly(valid), lon_poly(valid)] = ...
+        projinv(crsL93, ...
+                S(k).X(valid), ...
+                S(k).Y(valid));
+
+    S(k).Lon = lon_poly;
+    S(k).Lat = lat_poly;
+
+end
 
 end
 
