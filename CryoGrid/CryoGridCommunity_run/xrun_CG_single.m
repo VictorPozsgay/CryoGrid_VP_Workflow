@@ -11,7 +11,8 @@ result_path = '..\CryoGridCommunity_results\templates\';
 source_path = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
 
-run_name = 'transect'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
+% run_name = 'transect'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
+run_name = 'no_spinup'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
 %run_name = 'CG_EXAMPLE_sensitivity_test'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
 
 
