@@ -319,7 +319,7 @@ contains one row per massif:
 
 The validation table is available here:
 
-[LiDAR DEM validation table](forcing/DEM_Script_VP/LiDAR_HD_DEM/diagnostics/LiDAR_HD_DEM_validation.md)
+[LiDAR DEM validation table](/forcing/DEM_Script_VP/LiDAR_HD_DEM/diagnostics/LiDAR_HD_DEM_validation.md)
 
 ---
 
