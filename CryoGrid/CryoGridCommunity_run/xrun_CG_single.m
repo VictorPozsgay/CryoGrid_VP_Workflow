@@ -7,14 +7,14 @@
 %init_format = 'YAML';
 init_format = 'EXCEL3D'; % choose the option corresponding to the parameter file format
 
-result_path = '..\CryoGridCommunity_results\templates\test_SAFRAN\';
-% result_path = '..\CryoGridCommunity_results\templates\';
+% result_path = '..\CryoGridCommunity_results\templates\test_SAFRAN\';
+result_path = '..\CryoGridCommunity_results\templates\';
 source_path = '..\CryoGridCommunity_source\';
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
 
-% run_name = 'transect'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
+run_name = 'test_spatial'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
 % run_name = 'FORCING_seb_toElevation'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
-run_name = 'FORCING_seb_toElevation_transect'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
+% run_name = 'FORCING_seb_toElevation_transect'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
 %run_name = 'CG_EXAMPLE_sensitivity_test'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
 
 

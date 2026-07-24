@@ -61,14 +61,19 @@ classdef interpolate_elevation_massif_SAFRAN < process_BASE
                 error('The point (lon,lat)=(%d,%d) does not belong to any SAFRAN massif.', lon_point, lat_point)
             end
 
-            disp('interpolating SAFRAN data vertically')
-
             dist_alt = abs(forcing.SPATIAL.STATVAR.altitude - safran.data.z);
             [dist_alt, ind_alt] = sort(dist_alt);
 
             dist_alt=dist_alt(1:2);
             ind_alt = ind_alt(1:2);
             weights_alt = 1 - dist_alt./sum(dist_alt);
+
+            disp('interpolating SAFRAN data vertically')
+            fprintf('point elevation is: %.2f m \n', forcing.SPATIAL.STATVAR.altitude)
+
+            fprintf('nearest forcing elevations are: %.2f m and %.2f m \n', dist_alt(1), dist_alt(2))
+            fprintf('with respective weights: %.3f and %.3f \n', weights_alt(1), weights_alt(2))
+
 
             forcing.DATA.Tair        = double(safran.data.Tair(:,ind_alt) * weights_alt(:));
             forcing.DATA.q           = double(safran.data.q(:,ind_alt) * weights_alt(:));
