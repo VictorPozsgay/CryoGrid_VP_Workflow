@@ -4,10 +4,10 @@ MATLAB workflow for preparing forcing data and topographic inputs for **CryoGrid
 
 This repository contains tools developed for mountain permafrost modelling, including:
 
-- preparation of meteorological forcing datasets
-- processing of high-resolution DEM products
-- integration of SAFRAN and ERA5 datasets
-- CryoGrid workflow adaptations
+* preparation and processing of meteorological forcing datasets
+* high-resolution DEM processing
+* SAFRAN and ERA5 forcing preparation
+* CryoGrid Community workflow adaptations
 
 ---
 
@@ -18,21 +18,54 @@ The main organization is:
 ```
 CryoGrid_VP_Workflow/
 
-├── forcing/
-│
-│   ├── DEM_Script_VP/
-│   │   └── LiDAR_HD_DEM/
-│   │       └── IGN LiDAR HD DEM processing workflow
-│   │
-│   └── Forcing_Data/
-│       └── LiDAR_HD_DEM_10m/
-│           └── Generated LiDAR DEM dataset
-│
 ├── CryoGrid/
-│   └── CryoGrid source code and modifications
+│   │
+│   ├── CryoGridCommunity_source/
+│   │   │
+│   │   └── source/
+│   │       │
+│   │       ├── VP_Forcing/
+│   │       │   └── SAFRAN / ERA5 forcing preparation workflows
+│   │       │
+│   │       └── VP_DEM/
+│   │           └── High-resolution DEM processing workflows
+│   │
+│   ├── CryoGridCommunity_run/
+│   │
+│   └── CryoGridCommunity_results/
 │
-└── ...
+└── CryoGridCommunity_forcing/
+    └── Generated forcing datasets and DEM products
 ```
+
+The folder:
+
+```
+CryoGridCommunity_forcing/
+```
+
+contains generated forcing datasets and DEM products.
+
+Because these datasets can become very large, this folder is intentionally excluded from Git. It is expected to exist locally when running the processing workflows.
+
+---
+
+# CryoGrid VP forcing workflows
+
+The forcing preparation workflows are located in:
+
+```
+CryoGrid/CryoGridCommunity_source/source/VP_Forcing/
+```
+
+They include:
+
+* SAFRAN meteorological forcing processing
+* ERA5 data extraction and processing
+* merging of SAFRAN and ERA5-derived variables
+* preparation of CryoGrid-compatible forcing structures
+
+Detailed documentation will be added as the workflow is finalized.
 
 ---
 
@@ -40,11 +73,21 @@ CryoGrid_VP_Workflow/
 
 The IGN LiDAR HD workflow generates high-resolution topographic inputs for CryoGrid simulations over the French Alps.
 
-The processing scripts are located here:
+The processing scripts are located in:
 
-[LiDAR HD DEM processing workflow](forcing/DEM_Script_VP/LiDAR_HD_DEM/README.md)
+```
+CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/
+```
 
-The generated DEM dataset is stored separately here at forcing/Forcing_Data/LiDAR_HD_DEM_10m/ (but the data is too large to be on GitHub).
+The generated DEM products are stored separately in:
+
+```
+CryoGridCommunity_forcing/
+
+└── DEM/
+
+    └── LiDAR_HD_DEM_10m/
+```
 
 The workflow:
 
@@ -57,11 +100,15 @@ The workflow:
 7. Generates DEM and mask GeoTIFF files
 8. Runs automatic quality-control diagnostics
 
+Detailed documentation:
+
+[IGN LiDAR HD DEM workflow](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/README.md)
+
 ---
 
 # LiDAR DEM products
 
-The current repository dataset was generated at:
+The current generated dataset uses:
 
 ```
 Resolution = 10 m
@@ -69,15 +116,15 @@ Resolution = 10 m
 
 The workflow itself supports other resolutions by changing the requested resolution during DEM generation.
 
-All products use:
+All LiDAR products use:
 
-| Property | Value |
-|---|---|
-| Projection | Lambert-93 |
-| EPSG | 2154 |
-| Horizontal units | metres |
-| Elevation units | metres |
-| Vertical reference | IGN69 |
+| Property           | Value      |
+| ------------------ | ---------- |
+| Projection         | Lambert-93 |
+| EPSG               | 2154       |
+| Horizontal units   | metres     |
+| Elevation units    | metres     |
+| Vertical reference | IGN69      |
 
 For each SAFRAN massif:
 
@@ -93,10 +140,10 @@ DEM_mask_massif_XX.tif
 
 contains the corresponding polygon mask:
 
-| Value | Meaning |
-|---|---|
-| 1 | Inside SAFRAN massif |
-| 0 | Outside SAFRAN massif |
+| Value | Meaning               |
+| ----- | --------------------- |
+| 1     | Inside SAFRAN massif  |
+| 0     | Outside SAFRAN massif |
 
 The mask is independent from DEM availability and allows missing LiDAR pixels to be distinguished from areas outside the modelling domain.
 
@@ -104,59 +151,68 @@ The mask is independent from DEM availability and allows missing LiDAR pixels to
 
 # LiDAR diagnostics
 
-The LiDAR workflow produces automatic quality-control outputs:
+The LiDAR workflow generates automatic quality-control outputs.
+
+The full diagnostics are generated together with the DEM dataset:
 
 ```
-LiDAR_HD_DEM_10m/
+CryoGridCommunity_forcing/
 
-└── diagnostics/
+└── DEM/
 
-    ├── LiDAR_HD_DEM_massifs.png
-    ├── LiDAR_HD_DEM_missing_pixels.png
-    └── LiDAR_HD_DEM_validation.csv
+    └── LiDAR_HD_DEM_10m/
+
+        └── diagnostics/
 ```
 
-The diagnostics include:
+Since the forcing folder is ignored by Git, a lightweight copy of the diagnostics is stored with the processing scripts:
 
-- overview map of all DEMs
-- visualization of missing LiDAR pixels
-- validation table summarizing DEM coverage by SAFRAN massif
+```
+CryoGrid/
+
+└── CryoGridCommunity_source/
+
+    └── source/
+
+        └── VP_DEM/
+
+            └── LiDAR_HD_DEM/
+
+                └── diagnostics/
+```
+
+Tracked diagnostic outputs include:
+
+* DEM overview figure
+* missing LiDAR pixel figure
+* validation table
 
 ---
 
-# Running the LiDAR workflow
+# CryoGrid integration
 
-The main DEM generation function is:
-
-```matlab
-build_lidar_hd_dem()
-```
-
-The diagnostic workflow is:
-
-```matlab
-run_lidar_diagnostics()
-```
-
-Detailed instructions, function descriptions, and examples are provided in:
-
-[LiDAR HD DEM workflow README](forcing/DEM_Script_VP/LiDAR_HD_DEM/README.md)
-
----
-
-# Other forcing workflows
-
-Additional forcing preparation scripts are located in:
+The generated forcing and DEM datasets are designed to provide inputs for:
 
 ```
-forcing/
+CryoGrid/CryoGridCommunity_source/
 ```
 
-including tools for:
+and the associated CryoGrid simulation workflows.
 
-- SAFRAN forcing processing
-- ERA5 integration
-- CryoGrid forcing structure generation
+The general workflow is:
+
+```
+External datasets
+        |
+        v
+VP_Forcing / VP_DEM processing
+        |
+        v
+CryoGridCommunity_forcing/
+        |
+        v
+CryoGrid simulations
+```
 
 ---
 
@@ -164,10 +220,10 @@ including tools for:
 
 Main requirements:
 
-- MATLAB
-- Mapping Toolbox
+* MATLAB
+* Mapping Toolbox
 
-Some optional processing functions may require additional MATLAB toolboxes.
+Additional MATLAB toolboxes may be required depending on the processing workflow.
 
 ---
 
@@ -180,7 +236,7 @@ Lambert-93
 EPSG:2154
 ```
 
-The SAFRAN massif shapefile and generated DEM products therefore share the same projected coordinate system.
+The SAFRAN massif polygons and generated DEM products therefore share the same projected coordinate system.
 
 ---
 
@@ -192,12 +248,12 @@ Clone the repository:
 git clone <repository-url>
 ```
 
-Open MATLAB and add the workflow folders:
+Open MATLAB and add the CryoGrid source tree:
 
 ```matlab
-addpath(genpath("forcing/DEM_Script_VP"))
+addpath(genpath("CryoGrid/CryoGridCommunity_source/source"))
 ```
 
 For LiDAR DEM generation and processing, start with:
 
-[forcing/DEM_Script_VP/LiDAR_HD_DEM/README.md](forcing/DEM_Script_VP/LiDAR_HD_DEM/README.md)
+[IGN LiDAR HD DEM workflow](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/README.md)
