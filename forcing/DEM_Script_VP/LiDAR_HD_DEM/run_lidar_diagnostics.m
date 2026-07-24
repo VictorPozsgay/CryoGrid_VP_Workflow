@@ -56,6 +56,28 @@ writetable(T,outfile)
 
 fprintf("Saved %s\n",outfile)
 
+%% Save Markdown table for GitHub README
+
+mdfile = fullfile(save_folder,"LiDAR_HD_DEM_validation.md");
+
+fid = fopen(mdfile,"w");
+
+fprintf(fid,"| massif | DEM pixels | missing pixels | missing percentage |\n");
+fprintf(fid,"|---:|---:|---:|---:|\n");
+
+for i = 1:height(T)
+    fprintf(fid,...
+        "| %d | %d | %d | %.3f %% |\n",...
+        T.massif(i),...
+        T.DEM_pixels(i),...
+        T.missing_pixels(i),...
+        T.missing_percentage(i));
+end
+
+fclose(fid);
+
+fprintf("Saved %s\n",mdfile)
+
 
 %% Close figure
 
