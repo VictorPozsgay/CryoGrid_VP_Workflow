@@ -35,7 +35,12 @@ CryoGrid_VP_Workflow/
 │   └── CryoGridCommunity_results/
 │
 └── CryoGridCommunity_forcing/
-    └── Generated forcing datasets and DEM products
+    │
+    ├── meteo/
+    │   └── Generated SAFRAN/ERA5 forcing datasets
+    │
+    └── DEM/
+        └── Generated LiDAR DEM products
 ```
 
 The folder:
@@ -69,7 +74,42 @@ Detailed documentation will be added as the workflow is finalized.
 
 ---
 
+# VP_Forcing documentation
+
+The meteorological forcing preparation workflow is documented separately:
+
+[SAFRAN S2M workflow](CryoGrid/CryoGridCommunity_source/source/VP_Forcing/README.md)
+
+The workflow:
+
+1. Reads SAFRAN/S2M meteorological forcing
+2. Reads ERA5 top-of-atmosphere solar radiation
+3. Interpolates ERA5 radiation to SAFRAN massifs
+4. Produces CryoGrid-compatible forcing structures
+5. Runs automated validation and diagnostic plots
+
+The final forcing dataset is generated in:
+
+```
+CryoGridCommunity_forcing/
+└── meteo/
+    └── CryoGrid_ready/
+        └── FORCING_SAFRAN_ALL.mat
+```
+
+
+This file contains all processed SAFRAN massifs, elevation levels,
+meteorological variables, and radiation forcing required by CryoGrid.
+
+---
+
 # IGN LiDAR HD DEM workflow
+
+Detailed documentation:
+
+[IGN LiDAR HD DEM workflow](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/README.md)
+
+## Overview 
 
 The IGN LiDAR HD workflow generates high-resolution topographic inputs for CryoGrid simulations over the French Alps.
 
@@ -100,13 +140,9 @@ The workflow:
 7. Generates DEM and mask GeoTIFF files
 8. Runs automatic quality-control diagnostics
 
-Detailed documentation:
-
-[IGN LiDAR HD DEM workflow](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/README.md)
-
 ---
 
-# LiDAR DEM products
+## LiDAR DEM products
 
 The current generated dataset uses:
 
@@ -149,7 +185,7 @@ The mask is independent from DEM availability and allows missing LiDAR pixels to
 
 ---
 
-# LiDAR diagnostics
+## LiDAR diagnostics
 
 The LiDAR workflow generates automatic quality-control outputs.
 
