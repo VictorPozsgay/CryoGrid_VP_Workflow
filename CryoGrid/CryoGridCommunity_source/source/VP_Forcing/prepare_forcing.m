@@ -102,32 +102,32 @@ else
     download_S2M_data(forcing_path,email_address)
 end
 
-% %% Step 1
-% 
-% print_step(1,"Read SAFRAN forcing")
-% build_SAFRAN_per_massif(safran_path)
-% 
-% %% Step 2
-% 
-% print_step(2,"Read ERA5 TOA")
-% build_ERA5_toa(era5_path)
-% 
-% %% Step 3
-% 
-% print_step(3,"Interpolate ERA5 TOA to SAFRAN massifs")
-% interpolate_ERA5_to_massifs(era5_path,safran_path)
-% 
-% %% Step 4
-% 
-% print_step(4,"Merge SAFRAN and ERA5 forcing")
-% merge_SAFRAN_ERA5(era5_path,safran_path,output_path)
-% 
-% %% Step 5
-% 
-% print_step(5,"Build CryoGrid forcing collection")
-% build_combined_forcing(output_path)
-% 
-% %% Step 6
-% 
-% print_step(6,"CryoGrid forcing validation")
-% build_full_validation(output_path,diagnostic_path)
+%% Step 1
+
+print_step(1,"Read SAFRAN forcing")
+build_SAFRAN_per_massif(safran_path)
+
+%% Step 2
+
+print_step(2,"Read ERA5 TOA")
+build_ERA5_toa(era5_path)
+
+%% Step 3
+
+print_step(3,"Interpolate ERA5 TOA to SAFRAN massifs")
+interpolate_ERA5_to_massifs(era5_path,safran_path)
+
+%% Step 4
+
+print_step(4,"Merge SAFRAN and ERA5 forcing")
+merge_SAFRAN_ERA5(era5_path,safran_path,output_path)
+
+%% Step 5
+
+print_step(5,"Build CryoGrid forcing collection")
+build_combined_forcing(output_path)
+
+%% Step 6
+
+print_step(6,"CryoGrid forcing validation")
+build_full_validation(output_path,diagnostic_path)
