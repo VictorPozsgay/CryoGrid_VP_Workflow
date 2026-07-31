@@ -1,4 +1,4 @@
-function prepare_forcing(forcing_path)
+function prepare_forcing(forcing_path,varargin)
 %PREPARE_FORCING Build CryoGrid-ready forcing datasets from SAFRAN and ERA5.
 %
 % DESCRIPTION
@@ -36,6 +36,18 @@ function prepare_forcing(forcing_path)
 %       datasets. Intermediate folders (such as per_massif/) and the final
 %       CryoGrid_ready/ directory are created automatically when needed.
 %
+% OPTIONS
+%   'Email'
+%       Email address of the user where the download link is sent to IF the
+%       user wants the data downloaded. If no address is given, then the
+%       workflow ignores the data acquisition part and assumes the netCDF
+%       S2M / SAFRAN forcing files and associated shapefiles already exist.
+%       default = 'none'
+%       Example: 
+%           prepare_forcing(forcing_path,'Email','<name>@<extension>')
+%           or
+%           prepare_forcing(forcing_path) for default (no download)
+% 
 % OUTPUT
 %   Creates:
 %
@@ -52,6 +64,14 @@ function prepare_forcing(forcing_path)
 % SEE ALSO
 %   READ_SAFRAN, MERGE_TOA, BILINEAR_INTERP_TOA_MASSIFS,
 %   MERGE_SAFRAN_ERA, ALL_FORCING_TOGETHER.
+
+
+% Options
+p = inputParser;
+addParameter(p,"Email",'none')
+parse(p,varargin{:})
+email_address = p.Results.Email;
+
 
 addpath(genpath(fileparts(mfilename('fullpath'))));
 
@@ -73,32 +93,41 @@ for i = 1:numel(folders_to_create)
     end
 end
 
-%% Step 1
+%% Step 0
 
-print_step(1,"Read SAFRAN forcing")
-build_SAFRAN_per_massif(safran_path)
+print_step(0,"Download SAFRAN (S2M) forcing")
+if strcmp(email_address,'none')
+    disp('Skipping. Assuming the data already exists.')
+else
+    download_S2M_data(forcing_path,email_address)
+end
 
-%% Step 2
-
-print_step(2,"Read ERA5 TOA")
-build_ERA5_toa(era5_path)
-
-%% Step 3
-
-print_step(3,"Interpolate ERA5 TOA to SAFRAN massifs")
-interpolate_ERA5_to_massifs(era5_path,safran_path)
-
-%% Step 4
-
-print_step(4,"Merge SAFRAN and ERA5 forcing")
-merge_SAFRAN_ERA5(era5_path,safran_path,output_path)
-
-%% Step 5
-
-print_step(5,"Build CryoGrid forcing collection")
-build_combined_forcing(output_path)
-
-%% Step 6
-
-print_step(6,"CryoGrid forcing validation")
-build_full_validation(output_path,diagnostic_path)
+% %% Step 1
+% 
+% print_step(1,"Read SAFRAN forcing")
+% build_SAFRAN_per_massif(safran_path)
+% 
+% %% Step 2
+% 
+% print_step(2,"Read ERA5 TOA")
+% build_ERA5_toa(era5_path)
+% 
+% %% Step 3
+% 
+% print_step(3,"Interpolate ERA5 TOA to SAFRAN massifs")
+% interpolate_ERA5_to_massifs(era5_path,safran_path)
+% 
+% %% Step 4
+% 
+% print_step(4,"Merge SAFRAN and ERA5 forcing")
+% merge_SAFRAN_ERA5(era5_path,safran_path,output_path)
+% 
+% %% Step 5
+% 
+% print_step(5,"Build CryoGrid forcing collection")
+% build_combined_forcing(output_path)
+% 
+% %% Step 6
+% 
+% print_step(6,"CryoGrid forcing validation")
+% build_full_validation(output_path,diagnostic_path)

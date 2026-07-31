@@ -1,4 +1,4 @@
-function download_S2M_data(forcing_path)
+function download_S2M_data(forcing_path,email_address)
 %DOWNLOAD_S2M_DATA Download raw SAFRAN S2M forcing and massif shapefiles from AERIS.
 %
 % DESCRIPTION
@@ -34,6 +34,10 @@ function download_S2M_data(forcing_path)
 %
 %       The SAFRAN directory is created automatically if it does not
 %       already exist.
+% 
+%   email_address
+%       Email address of the user where the download link is sent to.
+% 
 %
 % OUTPUT
 %   Creates:
@@ -50,10 +54,9 @@ function download_S2M_data(forcing_path)
 
 addpath(genpath(fileparts(mfilename('fullpath'))));
 
-orderApiUrl     = "https://api.sedoo.fr/aeris-s2m-rest/data/download/865730e8-edeb-4c6b-ae58-80f95166509b";
 downloadBaseUrl = "https://api.sedoo.fr/aeris-s2m-rest/data/download/";
-shapefileUrl    = "https://api.sedoo.fr/aeris-s2m-rest/data/download/files/shapefiles";
-emailAddress    = "victor.pozsgay@univ-smb.fr";
+orderApiUrl     = downloadBaseUrl+"865730e8-edeb-4c6b-ae58-80f95166509b";
+shapefileUrl    = downloadBaseUrl+"files/shapefiles";
 
 safran_path = fullfile(forcing_path,"SAFRAN_test");
 raw_path    = fullfile(safran_path,"raw");
@@ -71,7 +74,7 @@ for i = 1:numel(folders_to_create)
 end
 
 %% Step 1
-print_step(1,"Submit S2M order")
+fprintf("Submit S2M order. \n")
 % years = arrayfun(@(y) string(y), 1958:2023);
 years = arrayfun(@(y) string(y), 1958:1959);
 payload = struct();
@@ -80,12 +83,12 @@ payload.areas.alp_flat = struct();
 payload.areas.alp_flat.meteo = struct();
 payload.areas.alp_flat.meteo.files = years;
 payload.datasetVersion = "2024.1";
-payload.email = emailAddress;
+payload.email = email_address;
 
 opts = weboptions('MediaType', 'application/json', 'Timeout', 60, 'ContentType', 'text');
 response = webwrite(orderApiUrl, payload, opts);
 fprintf("Order submitted: %s\n", response);
-fprintf("Check %s for the confirmation email (usually within minutes, link expires after 4 days).\n", emailAddress);
+fprintf("Check %s for the confirmation email (usually within minutes, link expires after 4 days).\n", email_address);
 
 fileNamePattern = '^[a-f0-9-]+\.zip$';
 while true
@@ -100,7 +103,7 @@ while true
 end
 
 %% Step 2
-print_step(2,"Download and extract SAFRAN forcing")
+fprintf("\n\nDownload and extract SAFRAN forcing. \n")
 url = downloadBaseUrl + fileName;
 zipPath = fullfile(raw_path, fileName);
 fprintf("Downloading from %s ...\n", url);
@@ -123,7 +126,7 @@ rmdir(fullfile(raw_path, "alp_flat"), 's');
 fprintf("Removed alp_flat/ (moved files only).\n");
 
 %% Step 3
-print_step(3,"Download massif shapefiles")
+fprintf("\n\nDownload massif shapefiles. \n")
 shapefileZipPath = fullfile(shape_path, "s2m_shapefiles.zip");
 fprintf("Downloading shapefiles from %s ...\n", shapefileUrl);
 websave(shapefileZipPath, shapefileUrl);

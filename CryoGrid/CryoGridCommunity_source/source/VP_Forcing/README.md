@@ -26,10 +26,10 @@ The complete processing chain is:
 ```mermaid
 flowchart TD
 
-    A[Raw SAFRAN forcing] --> B[1. SAFRAN reading and organization]
+    A[Raw SAFRAN forcing \nOnline\nor\n0. Data acquisition script] --> B[1. SAFRAN reading and organization]
     B --> C[SAFRAN forcing per massif/elevation]
 
-    D[Raw ERA5 TOA radiation] --> E[2. ERA5 TOA reading]
+    D[Raw ERA5 TOA radiation \nOnline\nor\n0. Data acquisition script] --> E[2. ERA5 TOA reading]
     E --> F[3. ERA5 interpolation to SAFRAN massifs]
 
     C --> G[4. SAFRAN + ERA5 merging]
@@ -241,6 +241,9 @@ The forcing variables follow CryoGrid conventions:
 
 # Workflow
 
+> [!IMPORTANT]  
+> The download of the ERA5 top of atmosphere incident solar radiation is handled in this repository but relies on Python rather than Matlab and hence needs to be done first, independently. See Section [Data acquisition](#data-acquisition) below.
+
 The complete workflow is executed using:
 
 [`prepare_forcing.m`](./prepare_forcing.m)
@@ -249,9 +252,32 @@ The complete workflow is executed using:
 prepare_forcing(forcing_path)
 ```
 
-where `forcing_path` corresponds to the meteorological data root directory.
+or 
+
+```matlab
+prepare_forcing(forcing_path,'Email','<user email address>')
+```
+if the user wishes to download the SAFRAN / S2M data at the beginning of the workflow, and
+
+where `forcing_path` corresponds to the meteorological data root directory, and hence to:
+
+[`CryoGridCommunity_forcing/meteo/`](../../../CryoGridCommunity_forcing/meteo/)
 
 The workflow performs:
+
+## Step 0 — SAFRAN / S2M downloading
+
+Downloads all the input forcing files (SAFRAN / S2M data and shapefiles).
+
+Main function:
+
+[`download_S2M_data.m`](./acquisition/download_S2M_data.m)
+
+Output:
+
+[`CryoGridCommunity_forcing/meteo/SAFRAN/raw/`](../../../CryoGridCommunity_forcing/meteo/SAFRAN/raw/)
+and
+[`CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/`](../../../CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/)
 
 ## Step 1 — SAFRAN processing
 
@@ -331,22 +357,62 @@ Main function:
 
 The workflow requires SAFRAN/S2M forcing data as input.
 
-The acquisition procedure depends on the available data access method and dataset version.
+The acquisition procedure depends on the available data access method and dataset version. Two options are available to the user:
 
-TODO:
+* Use the [`download_S2M_data.m`](./acquisition/download_S2M_data.m) included as Step 0 of the [Workflow](#workflow) section.
+    1. Simply add an optional argument to [`download_S2M_data.m`](./acquisition/download_S2M_data.m) in the form of 
+    ```matlab
+    prepare_forcing(forcing_path,'Email','<user email address>')
+    ```
+    where the last field should be the user's personal email address.
+    2. When the code stops and prompts you `Paste just the 'File name' from the email (e.g. 5ecf33e8-...-c34c.zip):`, open your email, copy the 'File name' field, and paste it into the MatlabCommand Window
+    3. Press Enter.
 
-Add detailed SAFRAN/S2M download instructions and citation.
+* Direct download online from the AERIS landing page.
+    1. https://www.aeris-data.fr/en/landing-page/?uuid=865730e8-edeb-4c6b-ae58-80f95166509b
+    2. 'Download' tab
+    3. Data selection:
+        Versions  : 2024.1 (a new version is soon going to be released)
+        Areas     : Alpes (flat)
+        Products  : meteo
+        Begin year: 1958 (soon 1940 in the new version)
+        End year  : 2023 (soon 2025 in the new version)
+    4. Tick 'I agree with the Data Policy' box
+    5. Click 'DOWNLOAD'
+    6. Enter your email address
+    7. Press the link from the email received ('smtp' sender)
+    8. Extract content of alp_flat/meteo into [`CryoGridCommunity_forcing/meteo/SAFRAN/raw/`](../../../CryoGridCommunity_forcing/meteo/SAFRAN/raw/)
+    9. Go back to the AERIS page and click the orange 'Shapefiles' icon
+    10. Extract content of s2m_shapefiles.zip/massifs_shapefiles.zip into [`CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/`](../../../CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/)
+
+> [!NOTE]  
+> A new version of the SAFRAN / S2M data will be available soon. It will rely on ERA5 reanalysis and hence will cover the full 1940-2025 period. When it is available on AERIS, make sure to modify the `payload.areas.alp_flat.meteo.files` and `payload.datasetVersion fields` in [`download_S2M_data.m`](./acquisition/download_S2M_data.m).
 
 ---
 
 ## ERA5 TOA radiation
 
-ERA5 data are obtained from the Copernicus Climate Data Store.
+ERA5 data are obtained from the Copernicus Climate Data Store. The workflow does not automatically download ERA5 data. The data can be downloaded throug the CDS API, but it relies on Python and hence this aprt cannot be included into the Worklow.
 
-The workflow does not automatically download ERA5 data.
+However, a Python script is provided to download the ERA5 top of atmosphere incident solar radiation
+
+[`download_ERA5_TOA_data.py`](./acquisition/download_ERA5_TOA_data.py)
+
+This needs to be done first, independently.
+
+In order to properly setup the CDS API and run the Python script, the user needs to
+1. Have a working version of Python and potentially install some packages
+2. Follow the instructions at https://cds.climate.copernicus.eu/how-to-api
+3. For Windows users, you will be redirected to https://confluence.ecmwf.int/spaces/CKB/pages/121847376/How+to+install+and+use+CDS+API+on+Windows
+4. Once the environement is setup, run the Python script with
+```python
+python download_ERA5_TOA_data.py
+```
+
+This will automatically download all the ERA5 TOA annual data netCDF files into [`CryoGridCommunity_forcing/meteo/ERA5/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/)
+
 
 The required CDS API request is provided here:
-
 [`CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt)
 
 This file documents the request used to download:
@@ -356,17 +422,7 @@ This file documents the request used to download:
 - NetCDF format
 - Alpine domain
 
-Example usage:
-
-```python
-import cdsapi
-
-client = cdsapi.Client()
-client.retrieve(dataset, request).download()
-```
-
-The downloaded files should be placed in:
-
+If the user wishes to download the yearly files individually directly from the Climate Data Store, this is also possible. They will need to be downloaded one by one, for each year, and then placed into
 [`CryoGridCommunity_forcing/meteo/ERA5/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/)
 
 ---
@@ -500,25 +556,30 @@ which can directly be used by CryoGrid workflows.
 
 - [`prepare_forcing.m`](./prepare_forcing.m)
 
+## Acquisition
+
+- [`download_S2M_data.m`](./acquisition/download_S2M_data.m)
+- [`download_ERA5_TOA_data.py`](./acquisition/download_ERA5_TOA_data.py)
+
 ## SAFRAN
 
-- [`build_SAFRAN_per_massif.m`](./build_SAFRAN_per_massif.m)
+- [`build_SAFRAN_per_massif.m`](./SAFRAN/build_SAFRAN_per_massif.m)
 
 ## ERA5
 
-- [`build_ERA5_toa.m`](./build_ERA5_toa.m)
-- [`interpolate_ERA5_to_massifs.m`](./interpolate_ERA5_to_massifs.m)
+- [`build_ERA5_toa.m`](./ERA5/build_ERA5_toa.m)
+- [`interpolate_ERA5_to_massifs.m`](./ERA5/interpolate_ERA5_to_massifs.m)
 
 ## Merging
 
-- [`merge_SAFRAN_ERA5.m`](./merge_SAFRAN_ERA5.m)
-- [`build_combined_forcing.m`](./build_combined_forcing.m)
+- [`merge_SAFRAN_ERA5.m`](./merge/merge_SAFRAN_ERA5.m)
+- [`build_combined_forcing.m`](./merge/build_combined_forcing.m)
 
-## Validation
+## Validation / diagnostics
 
-- [`build_full_validation.m`](./build_full_validation.m)
-- [`validate_CryoGrid_forcing.m`](./validate_CryoGrid_forcing.m)
-- [`plot_forcing_diagnostics.m`](./plot_forcing_diagnostics.m)
+- [`build_full_validation.m`](./validation/build_full_validation.m)
+- [`validate_CryoGrid_forcing.m`](./validation/validate_CryoGrid_forcing.m)
+- [`plot_forcing_diagnostics.m`](./validation/plot_forcing_diagnostics.m)
 
 ---
 
