@@ -242,7 +242,7 @@ The forcing variables follow CryoGrid conventions:
 # Workflow
 
 > [!IMPORTANT]  
-> The download of the ERA5 top of atmosphere incident solar radiation is handled in this repository but relies on Python rather than Matlab and hence needs to be done first, independently. See Section [Data acquisition](#data-acquisition) below.
+> The download of the ERA5 top of atmosphere incident solar radiation is handled from the MATLAB workflow but internally relies on Python and the CDS API. The Python environment therefore needs to be configured before using the automatic ERA5 download option. See Section [Data acquisition](#data-acquisition) below.
 
 The complete workflow is executed using:
 
@@ -252,18 +252,66 @@ The complete workflow is executed using:
 prepare_forcing(forcing_path)
 ```
 
-or 
+or
 
 ```matlab
 prepare_forcing(forcing_path,'Email','<user email address>')
 ```
-if the user wishes to download the SAFRAN / S2M data at the beginning of the workflow, and
 
-where `forcing_path` corresponds to the meteorological data root directory, and hence to:
+if the user wishes to download the SAFRAN / S2M data at the beginning of the workflow.
+
+ERA5 TOA radiation can additionally be downloaded automatically using:
+
+```matlab
+prepare_forcing(forcing_path,'DownloadERA5',true)
+```
+
+or combined with SAFRAN downloading:
+
+```matlab
+prepare_forcing(forcing_path,...
+    'Email','<user email address>',...
+    'DownloadERA5',true)
+```
+
+where `forcing_path` corresponds to the meteorological data root directory:
 
 [`CryoGridCommunity_forcing/meteo/`](../../../CryoGridCommunity_forcing/meteo/)
 
+## Configuration
+
+Some parts of the workflow require machine-specific configuration.
+
+The workflow uses a local configuration file:
+
+[`VP_config.m`](./VP_config.m)
+
+This file is intentionally not tracked by git because it contains machine-dependent information (such as the local Python executable path).
+
+A template is provided:
+
+[`VP_config_template.m`](./VP_config_template.m)
+
+To configure the workflow:
+
+1. Copy `VP_config_template.m` to `VP_config.m`.
+2. Edit the paths according to the local installation.
+3. Ensure that the configured Python environment contains the required packages:
+
+```bash
+pip install cdsapi netCDF4
+```
+
+The configuration is mainly required for the optional ERA5 acquisition step:
+
+```matlab
+prepare_forcing(forcing_path,'DownloadERA5',true)
+```
+
+If ERA5 data have already been downloaded, the workflow can be run without configuring Python.
+
 The workflow performs:
+
 
 ## Step 0 — SAFRAN / S2M downloading
 
@@ -273,11 +321,58 @@ Main function:
 
 [`download_S2M_data.m`](./acquisition/download_S2M_data.m)
 
+This step is optional. If no email address is provided, the workflow assumes that the required SAFRAN files already exist.
+
 Output:
 
 [`CryoGridCommunity_forcing/meteo/SAFRAN/raw/`](../../../CryoGridCommunity_forcing/meteo/SAFRAN/raw/)
+
 and
+
 [`CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/`](../../../CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/)
+
+
+## Step 0.5 — ERA5 TOA radiation downloading
+
+Downloads ERA5 top-of-atmosphere incident solar radiation using the Copernicus Climate Data Store (CDS) API.
+
+Main MATLAB wrapper:
+
+[`download_ERA5_TOA.m`](./acquisition/download_ERA5_TOA.m)
+
+The MATLAB wrapper:
+
+- loads the Python environment defined in [`VP_config.m`](./VP_config.m),
+- calls the Python CDS API acquisition script,
+- checks existing yearly files,
+- downloads only missing or invalid years.
+
+The Python acquisition script is:
+
+[`download_ERA5_TOA_data.py`](./acquisition/download_ERA5_TOA_data.py)
+
+The Python script provides:
+
+- yearly downloads for the full ERA5 period,
+- automatic restart capability,
+- NetCDF validation,
+- automatic file naming:
+
+```text
+era5_toa_YYYY.nc
+```
+
+Output:
+
+[`CryoGridCommunity_forcing/meteo/ERA5_test/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5_test/raw/)
+
+This step is optional and is activated with:
+
+```matlab
+prepare_forcing(forcing_path,'DownloadERA5',true)
+```
+
+If `DownloadERA5` is `false` (default), the workflow assumes that the ERA5 NetCDF files already exist.
 
 ## Step 1 — SAFRAN processing
 
@@ -390,40 +485,81 @@ The acquisition procedure depends on the available data access method and datase
 
 ---
 
-## ERA5 TOA radiation
+## ERA5 TOA radiation acquisition
 
-ERA5 data are obtained from the Copernicus Climate Data Store. The workflow does not automatically download ERA5 data. The data can be downloaded throug the CDS API, but it relies on Python and hence this aprt cannot be included into the Worklow.
+ERA5 data are obtained from the Copernicus Climate Data Store (CDS).
 
-However, a Python script is provided to download the ERA5 top of atmosphere incident solar radiation
+The ERA5 acquisition is integrated into the MATLAB workflow through:
+
+[`download_ERA5_TOA.m`](./acquisition/download_ERA5_TOA.m)
+
+which calls the Python script:
 
 [`download_ERA5_TOA_data.py`](./acquisition/download_ERA5_TOA_data.py)
 
-This needs to be done first, independently.
+The Python script relies on the CDS API and requires a valid Python installation and CDS API configuration.
 
-In order to properly setup the CDS API and run the Python script, the user needs to
-1. Have a working version of Python and potentially install some packages
-2. Follow the instructions at https://cds.climate.copernicus.eu/how-to-api
-3. For Windows users, you will be redirected to https://confluence.ecmwf.int/spaces/CKB/pages/121847376/How+to+install+and+use+CDS+API+on+Windows
-4. Once the environement is setup, run the Python script with
-```python
-python download_ERA5_TOA_data.py
+### Python environment setup
+
+Before using:
+
+```matlab
+prepare_forcing(forcing_path,'DownloadERA5',true)
 ```
 
-This will automatically download all the ERA5 TOA annual data netCDF files into [`CryoGridCommunity_forcing/meteo/ERA5/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/)
+the user must:
+
+1. Have a working Python installation.
+
+2. Install the required Python packages:
+
+```bash
+pip install cdsapi netCDF4
+```
+
+3. Configure the CDS API following:
+
+https://cds.climate.copernicus.eu/how-to-api
+
+For Windows users, additional instructions are available at:
+
+https://confluence.ecmwf.int/spaces/CKB/pages/121847376/How+to+install+and+use+CDS+API+on+Windows
+
+4. Configure the Python executable used by MATLAB in:
+
+[`VP_config.m`](./VP_config.m)
+
+The configuration file contains the path to the Python environment used for ERA5 acquisition.
 
 
-The required CDS API request is provided here:
-[`CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt)
+### ERA5 download details
 
-This file documents the request used to download:
+The script downloads:
 
 - ERA5 single-level reanalysis
 - variable: `toa_incident_solar_radiation`
 - NetCDF format
 - Alpine domain
+- yearly files
 
-If the user wishes to download the yearly files individually directly from the Climate Data Store, this is also possible. They will need to be downloaded one by one, for each year, and then placed into
-[`CryoGridCommunity_forcing/meteo/ERA5/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/)
+The output files are:
+
+```text
+era5_toa_YYYY.nc
+```
+
+stored in:
+
+[`CryoGridCommunity_forcing/meteo/ERA5_test/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5_test/raw/)
+
+The download is restartable:
+
+- existing valid yearly files are skipped,
+- incomplete or corrupted files are removed and re-downloaded.
+
+The corresponding CDS API request is documented in:
+
+[`CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt)
 
 ---
 

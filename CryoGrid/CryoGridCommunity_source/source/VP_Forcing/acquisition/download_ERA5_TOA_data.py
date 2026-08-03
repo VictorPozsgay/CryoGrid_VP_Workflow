@@ -46,6 +46,7 @@ def is_valid_era5_file(filename):
 
 
 def download_era5_toa(
+    project_root=None,
     start_year=1940,
     end_year=1941
 ):
@@ -65,20 +66,25 @@ def download_era5_toa(
         Download period.
     """
 
-    # Find CryoGrid root directory from this script location
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Determine CryoGrid root directory
+    if project_root is None:
 
-    cryogrid_root = os.path.abspath(
-        os.path.join(script_dir, "..", "..", "..", "..")
-    )
+        # Normal Python execution
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+
+        project_root = os.path.abspath(
+            os.path.join(script_dir, "..", "..", "..", "..")
+        )
 
     output_folder = os.path.join(
-        cryogrid_root,
+        project_root,
         "CryoGridCommunity_forcing",
         "meteo",
         "ERA5_test",
         "raw"
     )
+
+    print(f"Output folder: {output_folder}")
 
     # ERA5 bounding box [North, West, South, East].
     area=[46.75, 5.25, 43.25, 7.75]
@@ -169,6 +175,12 @@ def download_era5_toa(
             time.sleep(10)
 
 
-if __name__ == "__main__":
+if "project_root" in globals():
 
+    # MATLAB pyrunfile execution
+    download_era5_toa(project_root=project_root)
+
+else:
+
+    # Normal Python execution
     download_era5_toa()

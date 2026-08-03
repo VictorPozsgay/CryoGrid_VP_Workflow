@@ -11,7 +11,8 @@ function prepare_forcing(forcing_path,varargin)
 %     1. Read and concatenate yearly SAFRAN NetCDF files, producing one
 %        forcing file for each massif/elevation/slope/aspect combination.
 %
-%     2. Read and concatenate yearly ERA5 TOA NetCDF files into a single
+%     2. Optionally download ERA5 top-of-atmosphere radiation and then read
+%        and concatenate yearly ERA5 TOA NetCDF files into a single
 %        continuous dataset.
 %
 %     3. Interpolate ERA5 TOA radiation to the centroid of each SAFRAN
@@ -48,6 +49,21 @@ function prepare_forcing(forcing_path,varargin)
 %           or
 %           prepare_forcing(forcing_path) for default (no download)
 % 
+%   'DownloadERA5'
+%       Logical flag indicating whether ERA5 top-of-atmosphere (TOA)
+%       radiation should be downloaded automatically using the CDS API.
+%
+%       If false, the workflow assumes that the required ERA5 NetCDF files
+%       already exist in the forcing directory.
+%
+%       If true, the Python CDS API acquisition script is called through
+%       MATLAB. The Python environment is defined in VP_config.m.
+%
+%       default = false
+%
+%       Example:
+%           prepare_forcing(forcing_path,'DownloadERA5',true)
+% 
 % OUTPUT
 %   Creates:
 %
@@ -69,9 +85,17 @@ function prepare_forcing(forcing_path,varargin)
 % Options
 p = inputParser;
 addParameter(p,"Email",'none')
+addParameter(p,"DownloadERA5",false)
 parse(p,varargin{:})
-email_address = p.Results.Email;
 
+email_address = p.Results.Email;
+download_era5 = p.Results.DownloadERA5;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% RESTART FROM HERE WITH THE PYTHON FROM MATLAB SCRIPT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 addpath(genpath(fileparts(mfilename('fullpath'))));
 
@@ -100,6 +124,16 @@ if strcmp(email_address,'none')
     disp('Skipping. Assuming the data already exists.')
 else
     download_S2M_data(forcing_path,email_address)
+end
+
+%% Step 0.5
+
+print_step(0.5,"Download ERA5 TOA radiation")
+
+if download_era5
+    download_ERA5_TOA()
+else
+    disp('Skipping ERA5 download.')
 end
 
 %% Step 1
