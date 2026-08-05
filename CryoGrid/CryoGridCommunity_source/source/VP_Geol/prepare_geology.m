@@ -1,42 +1,76 @@
-function prepare_geology(forcing_path)
-%PREPARE_GEOLOGY Build the geological dataset required by CryoGrid workflows.
+function prepare_geology(forcing_path,dem_folder)
+%PREPARE_GEOLOGY Build BRGM geology products for CryoGrid workflows.
 %
-% PREPARE_GEOLOGY(FORCING_PATH) executes the complete prepare_geology workflow.
+% PREPARE_GEOLOGY(FORCING_PATH,DEM_FOLDER) executes the complete BRGM
+% GEO050K_HARM preparation workflow.
 %
-% The workflow is restartable: each step checks whether the required
-% output already exists and skips processing when possible.
+% The workflow is restartable: individual functions check whether their
+% output already exists and skip processing when possible.
 %
-% Current workflow:
+% Workflow:
 %
 %   1. Download BRGM GEO050K_HARM geological datasets
 %
-% Future steps:
+%   2. Merge department shapefiles
+%      Creates:
+%          processed/BRGM_GEO050K_HARM_ALPES.mat
 %
-%   2. Read and harmonize geological vectors
-%   3. Convert geological units to raster grids
-%   4. Project geology onto DEM grids
-%   5. Clip to massif masks
+%   3. Build complete BRGM geological inventory
+%      Creates:
+%          processed/BRGM_GEO050K_HARM_inventory.mat
+%
+%      This inventory contains all geological units present in the merged
+%      BRGM Alpine dataset.
+%
+%   4. Rasterize geology on CryoGrid DEM grids
+%      Creates:
+%          processed/raster/GEOLOGY_massif_XX.tif
+%
+%      Raster values correspond to the original BRGM inventory IDs.
+%      No-data pixels are stored as -9999.
+%
+%   5. Build raster-domain geological inventory
+%      Creates:
+%          processed/BRGM_GEO050K_HARM_raster_inventory.mat
+%
+%      This reduced inventory contains only geological units actually
+%      represented inside the CryoGrid DEM domain.
 %
 %
 % INPUT
 %
 %   forcing_path
-%       Root CryoGridCommunity_forcing directory.
+%       Root BRGM_GEO050K_HARM directory.
 %
-%       Example:
+%       Expected structure:
 %
-%       "D:\...\CryoGridCommunity_forcing"
+%       BRGM_GEO050K_HARM/
+%           raw/
+%           processed/
 %
+%
+%   dem_folder
+%       Folder containing DEM_massif_XX.tif files.
+%
+%
+% Example:
+%
+%   prepare_geology(forcing_path,dem_folder)
 %
 
-%% Paths
+
+%% Add local functions
 
 addpath(genpath(fileparts(mfilename('fullpath'))))
 
+
+%% Paths
+
 raw_path = fullfile(forcing_path,"raw");
 
+
 %% ============================================================
-%  STEP 1 - Download BRGM data
+% STEP 1 - Download BRGM data
 % =============================================================
 
 fprintf("\n================================================\n")
@@ -45,13 +79,54 @@ fprintf("================================================\n")
 
 download_BRGM(raw_path)
 
-%% Future steps
 
-% prepare_geology_process(...)
-% prepare_geology_rasterize(...)
-% prepare_geology_project(...)
+%% ============================================================
+% STEP 2 - Merge departments
+% =============================================================
+
+fprintf("\n================================================\n")
+fprintf("STEP 2 - BRGM merge\n")
+fprintf("================================================\n")
+
+merge_BRGM_departments(forcing_path)
 
 
-fprintf("\nprepare_geology completed.\n")
+%% ============================================================
+% STEP 3 - Build geological inventory
+% =============================================================
+
+fprintf("\n================================================\n")
+fprintf("STEP 3 - BRGM inventory\n")
+fprintf("================================================\n")
+
+build_BRGM_inventory(forcing_path)
+
+
+%% ============================================================
+% STEP 4 - Rasterize geology
+% =============================================================
+
+fprintf("\n================================================\n")
+fprintf("STEP 4 - BRGM rasterization\n")
+fprintf("================================================\n")
+
+rasterize_BRGM_geology(forcing_path,dem_folder)
+
+
+%% ============================================================
+% STEP 5 - Build raster inventory
+% =============================================================
+
+fprintf("\n================================================\n")
+fprintf("STEP 5 - BRGM raster inventory\n")
+fprintf("================================================\n")
+
+build_BRGM_raster_inventory(forcing_path)
+
+
+fprintf("\n================================================\n")
+fprintf("prepare_geology completed\n")
+fprintf("================================================\n")
+
 
 end

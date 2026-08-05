@@ -3,8 +3,12 @@ function GEO = read_BRGM_geology(filename)
 %
 %   GEO = READ_BRGM_GEOLOGY(filename)
 %
-%   Reads a BRGM GEO050K_HARM S_FGEOL shapefile and extracts the fields
-%   required for subsequent processing onto a DEM grid.
+%   Reads a BRGM GEO050K_HARM S_FGEOL shapefile using SHAPEREAD and stores
+%   polygon vertices explicitly for efficient rasterization.
+%
+%   The previous implementation stored geometries as mappolyshape objects.
+%   This version preserves the original polygon coordinates, allowing fast
+%   rasterization with poly2mask.
 %
 %   Input
 %   -----
@@ -14,10 +18,15 @@ function GEO = read_BRGM_geology(filename)
 %   Output
 %   ------
 %   GEO : structure
-%       Clean geological dataset containing:
 %
-%       GEO.Shape
-%           Polygon geometry.
+%       GEO.X
+%           Cell array containing polygon X coordinates (Lambert-93).
+%
+%       GEO.Y
+%           Cell array containing polygon Y coordinates (Lambert-93).
+%
+%           Multiple rings and holes are separated by NaN values following
+%           the ESRI shapefile convention.
 %
 %       GEO.CODE_LEG
 %           BRGM geological legend code.
@@ -28,79 +37,104 @@ function GEO = read_BRGM_geology(filename)
 %       GEO.DESCR
 %           Geological description.
 %
+%       GEO.BoundingBox
+%           Original polygon bounding boxes.
+%
 %       GEO.CRS
 %           Coordinate reference system information.
 %
 %   Notes
 %   -----
 %   The BRGM data are provided in Lambert-93 (EPSG:2154).
-%   This function does not modify geometries or merge geological units.
 %
-%   Example
-%   -------
-%       GEO = read_BRGM_geology( ...
-%           "GEO050K_HARM_073_S_FGEOL_2154.shp");
+%   The output is designed for rasterization:
+%
+%       polygon coordinates
+%              |
+%              v
+%          poly2mask
+%              |
+%              v
+%       geological raster
 %
 
 %% Check input
 
 if ~isfile(filename)
-    error("File not found: %s", filename)
+    error("File not found: %s",filename)
 end
+
 
 %% Read shapefile
 
-T = readgeotable(filename);
+S = shaperead(filename);
 
 
-%% Keep only useful fields
+%% Check required fields
 
-required_fields = ["Shape","CODE_LEG","NOTATION","DESCR"];
+required_fields = [
+    "X"
+    "Y"
+    "CODE_LEG"
+    "NOTATION"
+    "DESCR"
+];
 
-missing = setdiff(required_fields, string(T.Properties.VariableNames));
+
+available = string(fieldnames(S));
+
+missing = setdiff(required_fields,available);
 
 if ~isempty(missing)
-    error("Missing fields: %s", strjoin(missing,", "))
+    error("Missing fields: %s",strjoin(missing,", "))
 end
 
 
-T = T(:,cellstr(required_fields));
+%% Allocate output
 
-
-%% Standardize text fields
-
-text_fields = ["CODE_LEG","NOTATION","DESCR"];
-
-for i = 1:numel(text_fields)
-
-    f = text_fields(i);
-
-    if iscell(T.(f))
-        T.(f) = string(T.(f));
-    else
-        T.(f) = string(T.(f));
-    end
-
-end
-
-
-%% Store output
+n = numel(S);
 
 GEO = struct();
 
-GEO.Shape    = T.Shape;
-GEO.CODE_LEG = T.CODE_LEG;
-GEO.NOTATION = T.NOTATION;
-GEO.DESCR    = T.DESCR;
+GEO.X = cell(n,1);
+GEO.Y = cell(n,1);
+
+GEO.BoundingBox = cell(n,1);
+
+GEO.CODE_LEG = strings(n,1);
+GEO.NOTATION = strings(n,1);
+GEO.DESCR = strings(n,1);
 
 
-%% CRS information
+%% Copy geometry and attributes
+
+for i = 1:n
+    GEO.X{i} = S(i).X;
+    GEO.Y{i} = S(i).Y;
+
+    GEO.BoundingBox{i} = S(i).BoundingBox;
+
+    GEO.CODE_LEG(i) = string(S(i).CODE_LEG);
+    GEO.NOTATION(i) = string(S(i).NOTATION);
+    GEO.DESCR(i) = string(S(i).DESCR);
+end
+
+
+%% CRS
+
+% shaperead does not always store CRS information directly.
+% BRGM GEO050K_HARM data are Lambert-93.
 
 try
-    GEO.CRS = T.Shape.ProjectedCRS;
+    GEO.CRS = projcrs(2154);
 catch
     GEO.CRS = [];
 end
 
+
+%% Metadata
+
+GEO.source = ...
+    "BRGM GEO050K_HARM S_FGEOL harmonized geological formations";
 
 end
