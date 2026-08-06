@@ -1,4 +1,4 @@
-function T = inspect_BRGM_inventory(forcing_path)
+function T = inspect_BRGM_inventory(geology_path)
 %INSPECT_BRGM_INVENTORY Display BRGM geological inventory as a table.
 %
 % Creates a readable summary from BRGM_GEO050K_HARM_inventory.mat
@@ -14,7 +14,7 @@ function T = inspect_BRGM_inventory(forcing_path)
 
 %% Load inventory
 
-file = fullfile(forcing_path,"processed",...
+file = fullfile(geology_path,"processed",...
     "BRGM_GEO050K_HARM_inventory.mat");
 load(file,"GEOLOGY")
 

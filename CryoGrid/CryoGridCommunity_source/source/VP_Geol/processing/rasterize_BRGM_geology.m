@@ -1,4 +1,4 @@
-function rasterize_BRGM_geology(forcing_path,dem_folder)
+function rasterize_BRGM_geology(geology_path,dem_folder)
 %RASTERIZE_BRGM_GEOLOGY Rasterize BRGM geology onto DEM grids.
 %
 % Rasterizes BRGM GEO050K_HARM geological polygons onto each DEM massif
@@ -7,7 +7,7 @@ function rasterize_BRGM_geology(forcing_path,dem_folder)
 %
 % Input:
 %
-% forcing_path
+% geology_path
 %     Path to:
 %     geology/BRGM_GEO050K_HARM
 %
@@ -32,7 +32,7 @@ function rasterize_BRGM_geology(forcing_path,dem_folder)
 %
 % Example:
 %
-% rasterize_BRGM_geology(forcing_path,dem_folder)
+% rasterize_BRGM_geology(geology_path,dem_folder)
 %
 % Notes
 % -----
@@ -51,7 +51,7 @@ function rasterize_BRGM_geology(forcing_path,dem_folder)
 
 %% Paths
 
-processed_path = fullfile(forcing_path,"processed");
+processed_path = fullfile(geology_path,"processed");
 output_folder  = fullfile(processed_path,"raster");
 
 if ~isfolder(output_folder)

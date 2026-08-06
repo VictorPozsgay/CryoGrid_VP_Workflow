@@ -1,7 +1,7 @@
-function build_BRGM_inventory(forcing_path)
+function build_BRGM_inventory(geology_path)
 %BUILD_BRGM_INVENTORY Build BRGM geological unit inventory.
 %
-% BUILD_BRGM_INVENTORY(FORCING_PATH) creates a geological inventory from
+% BUILD_BRGM_INVENTORY(GEOLOGY_PATH) creates a geological inventory from
 % the merged BRGM GEO050K_HARM Alpine dataset.
 %
 % Geological units are defined by NOTATION. CODE_LEG is intentionally not
@@ -26,7 +26,7 @@ function build_BRGM_inventory(forcing_path)
 %       notation.
 %
 % Input:
-%   forcing_path
+%   geology_path
 %       Path to CryoGridCommunity_forcing/geology/BRGM_GEO050K_HARM
 %
 % Output:
@@ -40,7 +40,7 @@ function build_BRGM_inventory(forcing_path)
 %
 % Example:
 %
-%   build_BRGM_inventory(forcing_path)
+%   build_BRGM_inventory(geology_path)
 %
 % Notes
 % -----
@@ -62,7 +62,7 @@ function build_BRGM_inventory(forcing_path)
 
 %% Paths
 
-processed_path = fullfile(forcing_path,"processed");
+processed_path = fullfile(geology_path,"processed");
 
 input_file = fullfile(processed_path,"BRGM_GEO050K_HARM_ALPES.mat");
 output_file = fullfile(processed_path,"BRGM_GEO050K_HARM_inventory.mat");

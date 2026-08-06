@@ -1,4 +1,4 @@
-function plot_BRGM_preview(forcing_path)
+function plot_BRGM_preview(geology_path)
 %PLOT_BRGM_PREVIEW Plot BRGM geology by department.
 %
 % Displays one department at a time because mappolyshape/geoplot creates
@@ -8,7 +8,7 @@ fprintf("\nLoading BRGM geology\n")
 fprintf("--------------------\n")
 
 
-file = fullfile(forcing_path,...
+file = fullfile(geology_path,...
     "processed",...
     "BRGM_GEO050K_HARM_ALPES.mat");
 

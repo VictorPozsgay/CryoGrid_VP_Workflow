@@ -1,8 +1,8 @@
-function build_BRGM_raster_inventory(forcing_path)
+function build_BRGM_raster_inventory(geology_path)
 %BUILD_BRGM_RASTER_INVENTORY Build inventory of geological units present
 %in CryoGrid BRGM raster products.
 %
-% BUILD_BRGM_RASTER_INVENTORY(FORCING_PATH) creates a reduced geological
+% BUILD_BRGM_RASTER_INVENTORY(GEOLOGY_PATH) creates a reduced geological
 % inventory containing only BRGM geological units that are actually present
 % in GEOLOGY_massif_XX.tif raster products.
 %
@@ -42,12 +42,12 @@ function build_BRGM_raster_inventory(forcing_path)
 %
 % Example:
 %
-%   build_BRGM_raster_inventory(forcing_path)
+%   build_BRGM_raster_inventory(geology_path)
 %
 
 %% Paths
 
-processed_path = fullfile(forcing_path,"processed");
+processed_path = fullfile(geology_path,"processed");
 inventory_file = fullfile(processed_path, ...
     "BRGM_GEO050K_HARM_inventory.mat");
 raster_folder  = fullfile(processed_path,"raster");

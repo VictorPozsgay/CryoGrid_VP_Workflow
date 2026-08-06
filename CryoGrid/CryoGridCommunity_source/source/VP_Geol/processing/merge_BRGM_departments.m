@@ -1,7 +1,7 @@
-function merge_BRGM_departments(forcing_path)
+function merge_BRGM_departments(geology_path)
 %MERGE_BRGM_DEPARTMENTS Merge BRGM GEO050K_HARM geology layers.
 %
-%   merge_BRGM_departments(forcing_path)
+%   merge_BRGM_departments(geology_path)
 %
 %   Reads the BRGM GEO050K_HARM S_FGEOL shapefiles for the Alpine
 %   departments and creates a single merged geological dataset.
@@ -40,8 +40,8 @@ function merge_BRGM_departments(forcing_path)
 
 %% Paths
 
-root = fullfile(forcing_path,"raw");
-output_folder = fullfile(forcing_path,"processed");
+root = fullfile(geology_path,"raw");
+output_folder = fullfile(geology_path,"processed");
 
 if ~exist(output_folder,"dir")
     mkdir(output_folder)

@@ -1,8 +1,8 @@
-# BRGM GEO050K_HARM Geology Processing
+# Carte géologique harmonisée GEO050K (BRGM)
 
 ## Overview
 
-This workflow prepares geological datasets from the **BRGM GEO050K_HARM S_FGEOL** harmonized geological database for use in CryoGrid mountain permafrost simulations.
+This workflow prepares geological datasets from the **Carte géologique harmonisée GEO050K (GEO050K_HARM)** produced by the **BRGM (Bureau de Recherches Géologiques et Minières)** for use in CryoGrid mountain permafrost simulations.
 
 The workflow:
 
@@ -12,23 +12,23 @@ The workflow:
 - rasterizes geological units onto CryoGrid DEM grids,
 - creates a reduced inventory containing only geological units present within the modelling domain.
 
-The final products provide a spatial geological classification consistent with the CryoGrid DEM grids.
+The final products provide a spatial geological classification consistent with the CryoGrid DEM grids while preserving traceability to the original BRGM geological units.
 
 ---
 
 ## Data source
 
-The workflow uses:
+The workflow uses the official BRGM dataset:
 
-**BRGM GEO050K_HARM - Carte géologique harmonisée à 1/50 000**
+**Carte géologique harmonisée GEO050K (GEO050K_HARM)**
 
-The original data are provided as department-level shapefiles:
+The original data are distributed as department-level shapefiles containing geological formations represented as polygons in:
 
 - Lambert-93 projection (EPSG:2154)
-- polygon geological units
+- polygon vector geometry
 - BRGM geological notation (`NOTATION`)
 
-The workflow downloads only the departments required for the French Alps.
+Only the departments required to cover the French Alps are downloaded.
 
 ---
 
@@ -62,13 +62,41 @@ BRGM_GEO050K_HARM/
 
 ## Workflow
 
+Function: [`prepare_geology.m`](./prepare_geology.m)
+
 The complete processing chain is executed with:
 
 ```matlab
-prepare_geology(forcing_path, dem_folder)
+prepare_geology(geology_path, dem_folder)
 ```
 
-The workflow is restartable. Each processing step checks whether its output already exists and skips completed steps.
+where
+
+- **`geology_path`** (..\CryoGridCommunity_forcing\geology\BRGM_GEO050K_HARM) is the root directory of the BRGM dataset:
+
+```
+CryoGridCommunity_forcing/
+└── geology/
+    └── BRGM_GEO050K_HARM/
+```
+
+This folder contains the `raw/` and `processed/` subdirectories created during processing.
+
+- **`dem_folder`** (..\CryoGridCommunity_forcing\DEM\LiDAR_HD_DEM_10m\DEM) is the directory containing the CryoGrid DEM rasters:
+
+```
+CryoGridCommunity_forcing/
+└── DEM/
+    └── LiDAR_HD_DEM_10m/
+        └── DEM/
+            ├── DEM_massif_01.tif
+            ├── DEM_massif_02.tif
+            └── ...
+```
+
+Each `DEM_massif_XX.tif` defines the target grid onto which the geological polygons are rasterized.
+
+The workflow is fully restartable. Every processing step checks whether its output already exists and skips completed steps.
 
 ---
 
@@ -76,11 +104,7 @@ The workflow is restartable. Each processing step checks whether its output alre
 
 ### 1. Download BRGM datasets
 
-Function:
-
-```matlab
-download_BRGM()
-```
+Function: [`download_BRGM.m`](./download/download_BRGM.m)
 
 Downloads the required department shapefiles.
 
@@ -96,17 +120,13 @@ Current departments:
 74  Haute-Savoie
 ```
 
-The downloaded data are preserved unchanged in `raw/`.
+The downloaded files are preserved unchanged in `raw/`.
 
 ---
 
 ### 2. Merge geological polygons
 
-Function:
-
-```matlab
-merge_BRGM_departments()
-```
+Function: [`merge_BRGM_departments.m`](./processing/merge_BRGM_departments.m)
 
 Combines all department shapefiles into a single Alpine dataset:
 
@@ -125,11 +145,7 @@ The merged dataset contains:
 
 ### 3. Build geological inventory
 
-Function:
-
-```matlab
-build_BRGM_inventory()
-```
+Function: [`build_BRGM_inventory.m`](./processing/build_BRGM_inventory.m)
 
 Creates:
 
@@ -137,9 +153,9 @@ Creates:
 processed/BRGM_GEO050K_HARM_inventory.mat
 ```
 
-The inventory contains all geological units present in the merged BRGM dataset.
+The inventory contains every geological unit present in the merged BRGM dataset.
 
-Each geological unit is identified by:
+Each unit is described by:
 
 - `ID`
 - `NOTATION`
@@ -147,21 +163,17 @@ Each geological unit is identified by:
 - number of polygons
 - total mapped area
 
-`NOTATION` is used as the geological unit identifier.
+`NOTATION` is used as the geological unit identifier because `CODE_LEG` is not unique across departments.
 
 ---
 
 ### 4. Rasterize geology
 
-Function:
+Function: [`rasterize_BRGM_geology.m`](./processing/rasterize_BRGM_geology.m)
 
-```matlab
-rasterize_BRGM_geology()
-```
+Projects geological polygons onto the CryoGrid DEM grids.
 
-Projects geological polygons onto CryoGrid DEM grids.
-
-Output:
+Outputs:
 
 ```
 processed/raster/
@@ -169,15 +181,15 @@ processed/raster/
 GEOLOGY_massif_XX.tif
 ```
 
-Raster properties:
+Each raster:
 
-- identical grid geometry to the DEM,
-- identical spatial extent,
-- Lambert-93 projection,
-- integer geological IDs,
-- `-9999` used as no-data value.
+- has the same grid geometry as the corresponding DEM,
+- has the same spatial extent,
+- uses the Lambert-93 projection,
+- stores integer geological IDs,
+- uses `-9999` as the no-data value.
 
-Raster values correspond to the IDs stored in:
+Raster values correspond directly to the IDs stored in:
 
 ```
 BRGM_GEO050K_HARM_inventory.mat
@@ -187,11 +199,7 @@ BRGM_GEO050K_HARM_inventory.mat
 
 ### 5. Build raster-domain inventory
 
-Function:
-
-```matlab
-build_BRGM_raster_inventory()
-```
+Function: [`build_BRGM_raster_inventory.m`](./processing/build_BRGM_raster_inventory.m)
 
 Creates:
 
@@ -199,11 +207,11 @@ Creates:
 processed/BRGM_GEO050K_HARM_raster_inventory.mat
 ```
 
-This reduced inventory contains only geological units that occur inside the CryoGrid raster domain.
+This reduced inventory contains only geological units that actually occur within the CryoGrid modelling domain.
 
-Units present only outside the modelling area are removed. This can happen because the source departments extend beyond the Alpine massifs and include low-elevation or non-mountain regions.
+Some geological units present in the complete BRGM inventory are absent because they occur only outside the Alpine massifs (for example in low-elevation portions of the downloaded departments).
 
-The complete BRGM inventory is preserved separately.
+The original inventory is preserved separately.
 
 ---
 
@@ -216,16 +224,22 @@ The geological raster can be loaded together with the DEM:
 [Z,Rz] = readgeoraster("DEM_massif_01.tif");
 ```
 
-The grids are aligned:
+The two rasters are perfectly aligned:
 
 - identical dimensions,
 - identical spatial limits,
 - identical projection.
 
-The geological IDs can be linked to geological properties through:
+Geological IDs can then be linked to geological properties using:
 
 ```
 BRGM_GEO050K_HARM_raster_inventory.mat
+```
+
+or to the complete BRGM database using:
+
+```
+BRGM_GEO050K_HARM_inventory.mat
 ```
 
 ---
@@ -235,13 +249,28 @@ BRGM_GEO050K_HARM_raster_inventory.mat
 MATLAB toolboxes:
 
 - Mapping Toolbox
-- Image Processing Toolbox (required for some raster operations)
+- Image Processing Toolbox
 
 ---
 
 ## Notes
 
-- Raw BRGM data are preserved unchanged in `raw/`.
+- Raw BRGM data are never modified and remain stored in `raw/`.
 - Intermediate products are stored in `processed/`.
-- All processing steps are restartable.
-- Geological IDs remain consistent with the original BRGM inventory for traceability.
+- Every processing step is restartable.
+- Geological IDs remain consistent with the original BRGM inventory to ensure full traceability.
+
+---
+
+## TO DO
+
+The current workflow preserves the original BRGM geological classification by assigning one unique ID to each geological `NOTATION` present within the modelling domain.
+
+The next processing step will introduce a mapping from the 1,000+ BRGM geological units to a reduced set of CryoGrid-ready geological classes suitable for ground property parameterization (e.g., bedrock, limestone, unconsolidated sediments, moraine, scree, alluvium, etc.).
+
+The mapping will:
+
+- preserve traceability to the original BRGM `NOTATION`,
+- assign every retained geological unit to a CryoGrid geological class,
+- generate new raster products containing CryoGrid geology classes,
+- provide lookup tables linking BRGM units to CryoGrid classes and their associated model parameters.
