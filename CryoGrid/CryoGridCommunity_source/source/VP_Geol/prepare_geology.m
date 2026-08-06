@@ -1,7 +1,7 @@
-function prepare_geology(forcing_path,dem_folder)
+function prepare_geology(geology_path,dem_folder)
 %PREPARE_GEOLOGY Build BRGM geology products for CryoGrid workflows.
 %
-% PREPARE_GEOLOGY(FORCING_PATH,DEM_FOLDER) executes the complete BRGM
+% PREPARE_GEOLOGY(GEOLOGY_PATH,DEM_FOLDER) executes the complete BRGM
 % GEO050K_HARM preparation workflow.
 %
 % The workflow is restartable: individual functions check whether their
@@ -39,7 +39,7 @@ function prepare_geology(forcing_path,dem_folder)
 %
 % INPUT
 %
-%   forcing_path
+%   geology_path
 %       Root BRGM_GEO050K_HARM directory.
 %
 %       Expected structure:
@@ -55,7 +55,7 @@ function prepare_geology(forcing_path,dem_folder)
 %
 % Example:
 %
-%   prepare_geology(forcing_path,dem_folder)
+%   prepare_geology(geology_path,dem_folder)
 %
 
 
@@ -66,7 +66,7 @@ addpath(genpath(fileparts(mfilename('fullpath'))))
 
 %% Paths
 
-raw_path = fullfile(forcing_path,"raw");
+raw_path = fullfile(geology_path,"raw");
 
 
 %% ============================================================
@@ -88,7 +88,7 @@ fprintf("\n================================================\n")
 fprintf("STEP 2 - BRGM merge\n")
 fprintf("================================================\n")
 
-merge_BRGM_departments(forcing_path)
+merge_BRGM_departments(geology_path)
 
 
 %% ============================================================
@@ -99,7 +99,7 @@ fprintf("\n================================================\n")
 fprintf("STEP 3 - BRGM inventory\n")
 fprintf("================================================\n")
 
-build_BRGM_inventory(forcing_path)
+build_BRGM_inventory(geology_path)
 
 
 %% ============================================================
@@ -110,7 +110,7 @@ fprintf("\n================================================\n")
 fprintf("STEP 4 - BRGM rasterization\n")
 fprintf("================================================\n")
 
-rasterize_BRGM_geology(forcing_path,dem_folder)
+rasterize_BRGM_geology(geology_path,dem_folder)
 
 
 %% ============================================================
@@ -121,7 +121,7 @@ fprintf("\n================================================\n")
 fprintf("STEP 5 - BRGM raster inventory\n")
 fprintf("================================================\n")
 
-build_BRGM_raster_inventory(forcing_path)
+build_BRGM_raster_inventory(geology_path)
 
 
 fprintf("\n================================================\n")

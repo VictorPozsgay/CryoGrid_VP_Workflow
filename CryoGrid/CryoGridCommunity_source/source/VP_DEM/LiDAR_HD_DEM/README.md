@@ -1,60 +1,74 @@
-# IGN LiDAR HD DEM workflow (10 m)
+# IGN LiDAR HD DEM workflow
 
 Last revision July 2026 (Pozsgay V.)
 
-This folder contains the MATLAB workflow used to download, process and validate **IGN LiDAR HD elevation data** for CryoGrid applications in the French Alps.
+This folder contains the MATLAB workflow used to download and process **IGN LiDAR HD elevation data** for CryoGrid mountain permafrost applications in the French Alps.
 
-The workflow can generate DEMs at user-defined spatial resolutions. The currently generated dataset uses a **10 m resolution**.
+The workflow generates high-resolution topographic inputs from IGN LiDAR HD data and produces one DEM product per SAFRAN massif.
+
+The current generated dataset uses:
+
+```
+Resolution = 10 m
+```
 
 The workflow produces:
 
-* one DEM GeoTIFF per SAFRAN massif
-* one binary polygon mask per massif
-* quality-control diagnostics
+- one clipped DEM GeoTIFF per SAFRAN massif
+- one binary massif mask GeoTIFF per massif
+- cached IGN WMS chunks for restart capability
 
-The processing scripts and generated data are intentionally separated:
+Terrain derivatives (slope, aspect) will be added as a future processing step.
+
+---
+
+# Organization
+
+The workflow code and generated datasets are separated:
 
 ```
 CryoGrid/
 
 └── CryoGridCommunity_source/
-
     └── source/
-
         └── VP_DEM/
-
             └── LiDAR_HD_DEM/
-                └── MATLAB workflow
+                ├── prepare_dem.m
+                ├── process_single_massif.m
+                ├── run_lidar_diagnostics.m
+                ├── private/
+                └── README.md
 
 
 CryoGridCommunity_forcing/
-
 └── DEM/
-
     └── LiDAR_HD_DEM_10m/
-        └── Generated DEM dataset
+        ├── DEM/
+            └── cache/
+        └── diagnostics/ (generated separately)
 ```
 
-The `CryoGridCommunity_forcing/` folder is ignored by Git because the generated DEM dataset and IGN cache files are too large. A copy of the diagnostic outputs is kept with the processing workflow for documentation and visualization.
+The `CryoGridCommunity_forcing/` folder is excluded from Git because generated DEM products and IGN cache files can become very large.
 
 ---
 
 # Overview
 
-The workflow performs the following steps:
+The workflow performs:
 
 1. Reads SAFRAN massif polygons
 2. Queries IGN LiDAR HD elevation data through the IGN WMS service
-3. Automatically splits large requests into smaller chunks
-4. Downloads and caches individual tiles
-5. Merges tiles while prioritising valid elevation data
-6. Clips DEMs to SAFRAN massif boundaries
-7. Saves DEM and mask GeoTIFF files
-8. Generates automatic quality-control diagnostics
+3. Splits large requests into WMS-compatible chunks
+4. Downloads and caches individual chunks
+5. Removes WMS resampling artefacts
+6. Merges chunks into a continuous DEM
+7. Clips DEMs to SAFRAN massif boundaries
+8. Saves DEM and binary mask GeoTIFF files
+
+Terrain derivatives (slope and aspect) are planned as a subsequent processing step.
+Quality-control diagnostics can be generated separately using [`run_lidar_diagnostics.m`](./run_lidar_diagnostics.m).
 
 The resulting DEMs are designed as topographic inputs for CryoGrid simulations.
-
----
 
 # Coordinate system
 
@@ -72,20 +86,22 @@ All products use:
 
 # Spatial resolution
 
+Function: [`prepare_dem.m`](./prepare_dem.m).
+
 The workflow supports arbitrary output resolution.
 
 The requested resolution is controlled using the `Resolution` option of:
 
 ```matlab
-build_lidar_hd_dem()
+prepare_dem()
 ```
 
 Example: generate 5 m DEMs:
 
 ```matlab
-build_lidar_hd_dem( ...
-    "massifs_alpes_2154.shp", ...
-    "DEM", ...
+prepare_dem( ...
+    "CryoGridCommunity_forcing/DEM",
+    "CryoGrid/CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/massifs_alpes_2154.shp", ...
     "Resolution",5)
 ```
 
@@ -105,9 +121,7 @@ stored in:
 
 ```
 CryoGridCommunity_forcing/
-
 └── DEM/
-
     └── LiDAR_HD_DEM_10m/
 ```
 
@@ -117,14 +131,29 @@ Large SAFRAN massifs are divided into smaller chunks to respect IGN service limi
 
 ---
 
+# IGN WMS request size
+
+Large WMS requests can fail or return incomplete data. Based on empirical testing, requests of 4000 × 4000 pixels provide the best compromise between download efficiency and reliability while retaining a safety margin relative to the practical service limits. Larger requests may work occasionally but are significantly less robust, especially for large SAFRAN massifs. The workflow therefore automatically subdivides each massif into requests no larger than 4000 × 4000 pixels.
+
+---
+
 # Input data
 
 The main input is the SAFRAN massif shapefile:
 
 ```
-shapefile_massifs_SAFRAN/
+massifs_alpes_2154.shp
+```
 
-└── massifs_alpes_2154.shp
+found in
+
+```
+CryoGrid/
+└── CryoGridCommunity_forcing/
+    └── meteo/
+        └── SAFRAN/
+            └── shapefile/
+                └── massifs_alpes_2154.shp
 ```
 
 The shapefile must:
@@ -136,24 +165,26 @@ The shapefile must:
 massif_num
 ```
 
-which identifies each SAFRAN massif.
+which identifies each SAFRAN massif, and
+
+```
+nom
+```
+
+which is its official SAFRAN name.
 
 ---
 
 # DEM generation
 
-The main workflow is:
-
-```matlab
-build_lidar_hd_dem()
-```
+The main workflow is [`prepare_dem.m`](./prepare_dem.m).
 
 Example:
 
 ```matlab
-build_lidar_hd_dem( ...
-    "shapefile_massifs_SAFRAN/massifs_alpes_2154.shp", ...
-    "CryoGridCommunity_forcing/DEM/LiDAR_HD_DEM_10m/DEM")
+prepare_dem( ...
+    "CryoGridCommunity_forcing/DEM",
+    "CryoGrid/CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/massifs_alpes_2154.shp")
 ```
 
 The function supports:
@@ -169,7 +200,7 @@ Resolution = 10
 Example:
 
 ```matlab
-build_lidar_hd_dem(...,"Resolution",20)
+prepare_dem(...,"Resolution",20)
 ```
 
 ## Overwrite
@@ -179,7 +210,7 @@ Existing DEMs are preserved by default.
 To rebuild:
 
 ```matlab
-build_lidar_hd_dem(...,"Overwrite",true)
+prepare_dem(...,"Overwrite",true)
 ```
 
 ---
@@ -190,9 +221,7 @@ The output dataset is located at:
 
 ```
 CryoGridCommunity_forcing/
-
 └── DEM/
-
     └── LiDAR_HD_DEM_10m/
 ```
 
@@ -202,7 +231,6 @@ The folder contains:
 LiDAR_HD_DEM_10m/
 
 ├── DEM/
-│
 │   ├── cache/
 │   │   ├── massif_01/
 │   │   │   ├── chunk_001.tif
@@ -217,9 +245,7 @@ LiDAR_HD_DEM_10m/
 │   ├── DEM_mask_massif_02.tif
 │   └── ...
 │
-├── diagnostics/
-│
-└── shapefile_massifs_SAFRAN/
+└── diagnostics/ (optional)
 ```
 
 The `cache/` directory contains intermediate IGN downloads and should be preserved to avoid downloading the same data again.
@@ -241,11 +267,7 @@ Each DEM contains:
 * user-defined resolution
 * currently 10 m pixels
 
-Pixels outside the SAFRAN polygon are stored as:
-
-```
-NaN
-```
+Pixels outside the SAFRAN polygon are stored as -9999 (GeoTIFF NoData value).
 
 ---
 
@@ -275,7 +297,9 @@ The mask allows distinguishing:
 
 # Quality control
 
-The diagnostic workflow is:
+[`prepare_dem.m`](./prepare_dem.m) only generates DEM and mask products.
+
+Quality-control figures and validation tables can subsequently be generated using [`run_lidar_diagnostics.m`](./run_lidar_diagnostics.m), with the following workflow:
 
 ```matlab
 run_lidar_diagnostics()
@@ -286,7 +310,7 @@ Example:
 ```matlab
 run_lidar_diagnostics( ...
     "CryoGridCommunity_forcing/DEM/LiDAR_HD_DEM_10m/DEM", ...
-    "CryoGridCommunity_forcing/DEM/LiDAR_HD_DEM_10m/shapefile_massifs_SAFRAN/massifs_alpes_2154.shp", ...
+    "CryoGrid/CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/massifs_alpes_2154.shp", ...
     "diagnostics")
 ```
 
@@ -294,7 +318,6 @@ Generated files:
 
 ```
 diagnostics/
-
 ├── LiDAR_HD_DEM_massifs.png
 ├── LiDAR_HD_DEM_missing_pixels.png
 └── LiDAR_HD_DEM_validation.csv
@@ -304,15 +327,10 @@ A copy of these files is stored with the workflow:
 
 ```
 CryoGrid/
-
 └── CryoGridCommunity_source/
-
     └── source/
-
         └── VP_DEM/
-
             └── LiDAR_HD_DEM/
-
                 └── diagnostics/
 ```
 
@@ -371,10 +389,11 @@ The Markdown version used for GitHub display is:
 
 ## Main workflow
 
-| Function                  | Description     |
-| ------------------------- | --------------- |
-| `build_lidar_hd_dem.m`    | Generate DEMs   |
-| `run_lidar_diagnostics.m` | Run QC workflow |
+| Function                                                       | Description               |
+| -------------------------------------------------------------- | ------------------------- |
+| [`prepare_dem.m`](./prepare_dem.m)                             | Generate DEMs             |
+| [`process_single_massif.m`](./private/process_single_massif.m) | Process one SAFRAN massif |
+| [`run_lidar_diagnostics.m`](./run_lidar_diagnostics.m)         | Run QC workflow           |
 
 ---
 
@@ -386,24 +405,25 @@ Located in:
 private/
 ```
 
-| Function                 | Description            |
-| ------------------------ | ---------------------- |
-| `download_lidar_chunk.m` | Download IGN WMS tiles |
-| `split_dem_bbox.m`       | Split large requests   |
-| `merge_dem_chunks.m`     | Merge DEM tiles        |
-| `clip_dem_polygon.m`     | Apply massif clipping  |
-| `write_dem_geotiff.m`    | Write GeoTIFF outputs  |
+| Function                                                     | Description            |
+| -----------------------------------------------------------  | ---------------------- |
+| [`download_lidar_chunk.m`](./private/download_lidar_chunk.m) | Download IGN WMS tiles |
+| [`clean_lidar_chunk.m`](./private/clean_lidar_chunk.m)       | Remove WMS artefacts   |
+| [`split_dem_bbox.m`](./private/split_dem_bbox.m)             | Split large requests   |
+| [`merge_dem_chunks.m`](./private/merge_dem_chunks.m)         | Merge DEM tiles        |
+| [`clip_dem_polygon.m`](./private/clip_dem_polygon.m)         | Apply massif clipping  |
+| [`write_dem_geotiff.m`](./private/write_dem_geotiff.m)       | Write GeoTIFF outputs  |
 
 ---
 
 ## Diagnostics utilities
 
-| Function                      | Description                |
-| ----------------------------- | -------------------------- |
-| `plot_lidar_dem_base.m`       | Create DEM plotting object |
-| `plot_all_lidar_massifs.m`    | Save DEM overview          |
-| `plot_lidar_missing_pixels.m` | Plot missing pixels        |
-| `validate_lidar_dem.m`        | Generate validation table  |
+| Function                                                               | Description                |
+| ---------------------------------------------------------------------- | -------------------------- |
+| [`plot_lidar_dem_base.m`](./private/plot_lidar_dem_base.m)             | Create DEM plotting object |
+| [`plot_all_lidar_massifs.m`](./private/plot_all_lidar_massifs.m)       | Save DEM overview          |
+| [`plot_lidar_missing_pixels.m`](./private/plot_lidar_missing_pixels.m) | Plot missing pixels        |
+| [`validate_lidar_dem.m`](./private/validate_lidar_dem.m)               | Generate validation table  |
 
 ---
 
@@ -413,3 +433,5 @@ private/
 * DEM generation requires multiple IGN WMS requests and can take significant time.
 * The workflow currently targets SAFRAN massifs of the French Alps.
 * Other polygon datasets can be used provided they are supplied in Lambert-93.
+* The workflow is restartable. Existing massif DEMs are skipped unless `Overwrite=true`.
+* Downloaded IGN WMS chunks are cached and reused if available.
