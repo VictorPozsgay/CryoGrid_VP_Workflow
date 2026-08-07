@@ -2,8 +2,17 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %PREPARE_DEM Build CryoGrid-ready topographic products from IGN LiDAR HD.
 %
 % DESCRIPTION
-%   Runs the complete workflow required to generate CryoGrid-compatible
-%   topographic products from IGN LiDAR HD elevation data.
+%   Runs the complete DEM preparation workflow required to generate
+%   CryoGrid-compatible topographic inputs from IGN LiDAR HD data over the
+%   French Alps.
+%
+%   The workflow generates:
+%       - individual SAFRAN massif DEM products
+%       - individual massif binary masks
+%       - one merged Alpine DEM
+%       - terrain derivatives from the Alpine DEM
+%       - massif-scale terrain products clipped from the Alpine products
+%
 %
 %   The workflow performs:
 %
@@ -11,71 +20,109 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %
 %       2. For each massif:
 %           - download IGN LiDAR HD elevation data
-%           - merge WMS chunks
-%           - remove invalid pixels
+%           - split large requests into WMS-compatible chunks
+%           - reuse cached WMS downloads when available
+%           - clean invalid WMS pixels
+%           - merge chunks
 %           - clip to massif boundary
 %           - save DEM and mask GeoTIFF files
 %
-%       3. Merge massif DEMs into a continuous Alpine DEM
+%       3. Merge all massif DEMs into one Alpine DEM:
+%           DEM/ALPS/
+%               DEM_ALPS.tif
+%               DEM_ALPS_mask.tif
 %
-%       4. Compute Alpine topography products
-%           - slope
-%           - aspect
+%       4. Compute Alpine terrain derivatives:
+%           SLOPE/
+%               ALPS/
+%                   SLOPE_ALPS.tif
+%           ASPECT/
+%               ALPS/
+%                   ASPECT_ALPS.tif
 %
-%       5. Clip Alpine topography products back to individual
-%          SAFRAN massifs
+%       5. Clip Alpine topographic products back to SAFRAN massifs:
+%           PRODUCT/
+%               PRODUCT_massif_XX.tif
+%
+%       6. Optionally run quality-control diagnostics.
 %
 %
-% INPUT
+% INPUTS
 %
 %   dem_path
-%       Root directory for generated DEM products.
+%       Parent directory where generated DEM products are stored.
+%
+%       Example:
+%           CryoGridCommunity_forcing/DEM/
+%
 %
 %   path_shapefile
-%       SAFRAN massif shapefile (Lambert-93 / EPSG:2154).
+%       SAFRAN massif shapefile.
+%
+%       Requirements:
+%           - Lambert-93 projection
+%           - EPSG:2154
+%           - massif_num attribute
 %
 %
 % OPTIONS
 %
-%   'Resolution'
-%       DEM resolution in metres.
-%       Default = 10
+%   "Resolution"
+%       Output DEM resolution in metres.
+%       Default: 10
 %
-%   'Overwrite'
-%       Recompute existing products.
-%       Default = false
+%   "Overwrite"
+%       Recompute existing massif DEM products.
+%       Default: false
 %
+%   "Diagnostics"
+%       Run run_lidar_diagnostics() after product generation.
+%       Default: false
 %
 % OUTPUT
 %
-%   Creates a directory:
+%   Creates:
 %       LiDAR_HD_DEM_XXm/
+%           DEM/
+%               DEM_massif_XX.tif
+%               DEM_mask_massif_XX.tif
 %
-%   containing:
+%               ALPS/
+%                   DEM_ALPS.tif
+%                   DEM_ALPS_mask.tif
 %
-%       DEM/
-%           DEM_massif_XX.tif
-%           DEM_mask_massif_XX.tif
-%           ALPS/
-%               DEM_ALPS.tif
-%               DEM_ALPS_mask.tif
-%           cache/
+%           SLOPE/
+%               ALPS/
+%                   SLOPE_ALPS.tif
 %
-%       SLOPE/
-%           ALPS/
-%               SLOPE_ALPS.tif
-%           SLOPE_massif_XX.tif
+%               SLOPE_massif_XX.tif
 %
-%       ASPECT/
-%           ALPS/
-%               ASPECT_ALPS.tif
-%           ASPECT_massif_XX.tif
+%           ASPECT/
+%               ALPS/
+%                   ASPECT_ALPS.tif
 %
-%   Additional topographic products may be added in future releases
-%   following the same directory structure.
+%               ASPECT_massif_XX.tif
+%
+%           DEM/cache/
+%               Cached IGN WMS chunks
+%
+%           diagnostics/
+%               Quality-control figures and tables
+%               (if Diagnostics=true)
 %
 %
-% NOTE
+% NOTES
+%
+%   Terrain derivatives are computed from the merged Alpine DEM before
+%   clipping to SAFRAN massifs. This avoids artificial discontinuities at
+%   massif boundaries.
+%
+%   No resampling is performed when clipping products. Massif products are
+%   extracted by matching the exact Alpine grid and applying the DEM mask.
+%
+%   All products use:
+%       Projection: Lambert-93
+%       EPSG:       2154
 %
 %   IGN LiDAR HD WMS requests become unreliable for very large images.
 %   Requests are therefore limited to:
@@ -83,11 +130,19 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %       max_width  = 4000 pixels
 %       max_height = 4000 pixels
 %
-%   which provides a good compromise between efficiency and robustness.
-
+%   Existing cached chunks and generated products are reused unless
+%   Overwrite=true.
+%
+% SEE ALSO
+%
+%   process_single_massif
+%   merge_massif_DEMs
+%   compute_dem_derivatives
+%   clip_topography_products
+%   run_lidar_diagnostics
+%
 
 addpath(genpath(fileparts(mfilename('fullpath'))));
-
 
 %% Options
 
@@ -95,11 +150,13 @@ p = inputParser;
 
 addParameter(p,"Resolution",10)
 addParameter(p,"Overwrite",false)
+addParameter(p,"Diagnostics",false)
 
 parse(p,varargin{:})
 
 resolution = p.Results.Resolution;
 overwrite  = p.Results.Overwrite;
+diagnostics = p.Results.Diagnostics;
 
 %% WMS limits
 
@@ -174,5 +231,20 @@ compute_dem_derivatives(output_path)
 
 print_step(5,"Clip topography products to massifs")
 clip_topography_products(output_path)
+
+
+%% Step 6
+
+print_step(6,"Convert aspect to CryoGrid convention")
+convert_aspect_to_cryogrid(output_path)
+
+
+%% Step 7
+
+if diagnostics
+    print_step(7,"Run LiDAR diagnostics")
+    run_lidar_diagnostics(output_path,path_shapefile);
+end
+
 
 end

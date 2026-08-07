@@ -2,74 +2,48 @@
 
 MATLAB workflow for preparing forcing data and environmental inputs for **CryoGrid mountain permafrost simulations**.
 
-This repository contains tools developed for mountain permafrost modelling, including:
+This repository contains tools for:
 
-* preparation and processing of meteorological forcing datasets
-* high-resolution DEM generation and processing
-* geological dataset preparation from BRGM GEO050K_HARM
+* meteorological forcing preparation (SAFRAN / ERA5)
+* high-resolution DEM and topographic processing (IGN LiDAR HD)
+* geological dataset preparation (BRGM GEO050K_HARM)
 * CryoGrid Community workflow adaptations
 
 ---
 
 # Repository structure
 
-The main organization is:
-
 ```
 CryoGrid_VP_Workflow/
 
 ├── CryoGrid/
-│   │
+│
 │   ├── CryoGridCommunity_source/
-│   │   │
 │   │   └── source/
-│   │       │
 │   │       ├── VP_Forcing/
-│   │       │   └── SAFRAN / ERA5 forcing preparation workflows
-│   │       │
 │   │       ├── VP_DEM/
-│   │       │   └── High-resolution DEM and terrain-product generation workflows
-│   │       │
 │   │       └── VP_Geol/
-│   │           └── BRGM GEO050K_HARM geological processing workflows
 │   │
 │   ├── CryoGridCommunity_run/
-│   │
 │   └── CryoGridCommunity_results/
 │
 └── CryoGridCommunity_forcing/
-    │
     ├── meteo/
-    │   └── Generated SAFRAN/ERA5 forcing datasets
-    │
     ├── geology/
-    │   └── Generated BRGM geological datasets
-    │
     └── DEM/
-        └── Generated LiDAR DEM products
 ```
 
-The folder:
-
-```
-CryoGridCommunity_forcing/
-```
-
-contains generated forcing datasets, geological products, and DEM products.
-
-Because these datasets can become very large, this folder is intentionally excluded from Git. It is expected to exist locally when running the processing workflows.
+`CryoGridCommunity_forcing/` contains generated datasets and is excluded from Git because products can become very large.
 
 ---
 
 # CryoGrid VP workflows
 
-The processing workflows are located in:
+The processing modules are located in:
 
 ```
-CryoGridCommunity_source/source/
+CryoGrid/CryoGridCommunity_source/source/
 ```
-
-They are organized into three independent modules:
 
 ```
 source/
@@ -84,7 +58,7 @@ source/
     └── Geological dataset preparation
 ```
 
-Each workflow is independently executable and documented in its own README.
+Each workflow has its own documentation.
 
 ---
 
@@ -94,21 +68,20 @@ Documentation:
 
 [SAFRAN S2M workflow](CryoGrid/CryoGridCommunity_source/source/VP_Forcing/README.md)
 
-The workflow prepares CryoGrid-compatible meteorological forcing datasets by combining:
+The workflow combines:
 
 * SAFRAN/S2M meteorological forcing
-* ERA5 top-of-atmosphere solar radiation
+* ERA5 top-of-atmosphere radiation
 
-The workflow:
+It:
 
-1. Reads SAFRAN/S2M meteorological forcing
-2. Reads ERA5 top-of-atmosphere solar radiation
-3. Interpolates ERA5 radiation to SAFRAN massifs
-4. Merges meteorological and radiation variables
-5. Produces CryoGrid-compatible forcing structures
-6. Runs automated validation and diagnostic plots
+1. Reads SAFRAN forcing
+2. Reads ERA5 radiation
+3. Interpolates radiation to SAFRAN massifs
+4. Produces CryoGrid-compatible forcing structures
+5. Runs validation and diagnostics
 
-The final forcing dataset is generated in:
+Output:
 
 ```
 CryoGridCommunity_forcing/
@@ -116,8 +89,6 @@ CryoGridCommunity_forcing/
     └── CryoGrid_ready/
         └── FORCING_SAFRAN_ALL.mat
 ```
-
-This file contains all processed SAFRAN massifs, elevation levels, meteorological variables, and radiation forcing required by CryoGrid.
 
 ---
 
@@ -127,19 +98,13 @@ Documentation:
 
 [IGN LiDAR HD DEM workflow](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/README.md)
 
-Main workflow: [`prepare_dem.m`](/CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/prepare_dem.m).
+Main workflow:
 
-## Overview
+[`prepare_dem.m`](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/prepare_dem.m)
 
-The IGN LiDAR HD workflow generates high-resolution topographic inputs for CryoGrid simulations over the French Alps.
+The workflow generates high-resolution topographic products for CryoGrid simulations over the French Alps.
 
-The processing scripts are located in:
-
-```
-CryoGridCommunity_source/source/VP_DEM/
-```
-
-The generated DEM and terrain products are stored separately in:
+Generated products are stored separately:
 
 ```
 CryoGridCommunity_forcing/
@@ -147,168 +112,250 @@ CryoGridCommunity_forcing/
     └── LiDAR_HD_DEM_10m/
 ```
 
-The workflow is fully restartable. Previously downloaded IGN WMS chunks are stored in a persistent cache, allowing interrupted processing to resume without repeating completed downloads. Each generated dataset also contains a persistent cache/ directory storing downloaded IGN WMS chunks used for restart capability and to avoid redundant downloads.
+---
 
-The workflow is driven by [`prepare_dem.m`](/CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/prepare_dem.m) and:
+## DEM workflow
 
-1. Reads SAFRAN massif polygons.
-2. Downloads IGN LiDAR HD elevation data through the IGN WMS service.
-3. Automatically splits large requests into WMS-compatible chunks.
-4. Reuses cached downloads when available, allowing interrupted runs to be resumed.
-5. Cleans and merges elevation data into one DEM per SAFRAN massif.
-6. Clips DEMs to the SAFRAN massif boundaries.
-7. Generates DEM and binary mask GeoTIFF files.
-8. Merges all massif DEMs into a continuous Alpine DEM.
-9. Computes terrain derivatives (currently slope and aspect) from the Alpine DEM.
-10. Clips all terrain products back to the individual massif grids.
+Run:
 
-Quality-control diagnostics are provided by the separate [`run_lidar_diagnostics.m`](/CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/run_lidar_diagnostics.m) workflow.
+```matlab
+prepare_dem()
+```
+
+The workflow:
+
+1. Reads SAFRAN massif polygons
+2. Downloads IGN LiDAR HD elevation data through WMS
+3. Splits large requests into compatible chunks
+4. Reuses cached downloads
+5. Builds massif DEMs and masks
+6. Merges massifs into a continuous Alpine DEM
+7. Computes terrain derivatives
+8. Clips derivatives to massifs
+9. Generates CryoGrid-compatible aspect products
+10. Optionally runs diagnostics
+
+The workflow is fully restartable.
 
 ---
 
-## LiDAR DEM products
+## DEM products
 
-The current generated dataset uses:
+Current dataset:
 
 ```
 Resolution = 10 m
 ```
 
-The workflow itself supports other resolutions by changing the requested resolution during DEM generation.
+All products use:
 
-All LiDAR products use:
+| Property | Value |
+|---|---|
+| Projection | Lambert-93 |
+| EPSG | 2154 |
+| Horizontal units | metres |
+| Elevation units | metres |
+| Vertical reference | IGN69 |
 
-| Property           | Value      |
-| ------------------ | ---------- |
-| Projection         | Lambert-93 |
-| EPSG               | 2154       |
-| Horizontal units   | metres     |
-| Elevation units    | metres     |
-| Vertical reference | IGN69      |
-
-The generated products include:
-
-* massif DEMs
-* massif masks
-* a merged Alpine DEM
-* Alpine terrain derivatives (currently slope and aspect)
-* massif terrain derivatives clipped from the Alpine products
-
-For each SAFRAN massif:
+For each massif:
 
 ```
 DEM_massif_XX.tif
 ```
 
-contains the elevation data, and
+contains elevation data.
 
 ```
 DEM_mask_massif_XX.tif
 ```
 
-contains the corresponding polygon mask:
+contains:
 
 | Value | Meaning |
-| ----- | ------- |
+|---|---|
 | 1 | Inside SAFRAN massif |
 | 0 | Outside SAFRAN massif |
 
-Terrain derivatives are computed from the merged Alpine DEM before being clipped back to the massif grids. This avoids artificial discontinuities at SAFRAN massif boundaries while ensuring that all DEM, mask and derivative products for a given massif share identical extent, resolution and pixel alignment.
+The Alpine merged DEM:
+
+```
+DEM/
+
+└── ALPS/
+
+    ├── DEM_ALPS.tif
+    └── DEM_ALPS_mask.tif
+```
+
+is used as the basis for terrain derivatives.
 
 ---
 
-# VP_Geol: BRGM GEO050K_HARM geological workflow
+## Terrain products
+
+Terrain derivatives are computed from the continuous Alpine DEM to avoid discontinuities at massif boundaries.
+
+Generated products:
+
+```
+SLOPE/
+
+├── ALPS/
+│   └── SLOPE_ALPS.tif
+│
+└── SLOPE_massif_XX.tif
+
+
+ASPECT/
+
+├── ALPS/
+│   └── ASPECT_ALPS.tif
+│
+└── ASPECT_massif_XX.tif
+```
+
+Slope:
+
+```
+degrees (°)
+```
+
+Aspect follows the geographic convention:
+
+```
+0°   = North
+90°  = East
+180° = South
+270° = West
+```
+
+CryoGrid uses:
+
+```
+0°   = South
+90°  = East
+180° = North
+270° = West
+```
+
+Therefore:
+
+```
+ASPECT_CryoGrid/
+└── ASPECT_CryoGrid_massif_XX.tif
+```
+
+is generated separately. Original aspect products are preserved.
+
+---
+
+## DEM diagnostics
+
+Diagnostics are generated with:
+
+```matlab
+run_lidar_diagnostics()
+```
+
+They can be included directly in `prepare_dem()`:
+
+```matlab
+prepare_dem( ...
+    dem_path,...
+    shapefile,...
+    "Diagnostics",true)
+```
+
+or run independently:
+
+```matlab
+run_lidar_diagnostics( ...
+    "CryoGridCommunity_forcing/DEM/LiDAR_HD_DEM_10m", ...
+    "CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/massifs_alpes_2154.shp")
+```
+
+The diagnostic workflow automatically detects Alpine products following:
+
+```
+PRODUCT/
+
+└── ALPS/
+
+    └── PRODUCT_ALPS.tif
+```
+
+Examples:
+
+```
+DEM/ALPS/DEM_ALPS.tif
+SLOPE/ALPS/SLOPE_ALPS.tif
+ASPECT/ALPS/ASPECT_ALPS.tif
+```
+
+Outputs:
+
+```
+diagnostics/
+├── LiDAR_HD_DEM_massifs.png
+├── LiDAR_HD_<PRODUCT>_ALPS_overview.png
+├── LiDAR_HD_DEM_missing_pixels.png
+├── LiDAR_HD_DEM_validation.csv
+└── LiDAR_HD_DEM_validation.md
+```
+
+---
+
+# VP_Geol: BRGM GEO050K_HARM workflow
 
 Documentation:
 
 [BRGM GEO050K_HARM workflow](CryoGrid/CryoGridCommunity_source/source/VP_Geol/README.md)
 
-## Overview
+The workflow prepares geological inputs for CryoGrid:
 
-The geological workflow prepares geological datasets from the official **BRGM GEO050K_HARM** database for CryoGrid simulations.
+1. Downloads BRGM GEO050K_HARM data
+2. Merges Alpine geological polygons
+3. Builds geological inventories
+4. Rasterizes geological units on DEM grids
 
-The processing scripts are located in:
-
-```
-CryoGridCommunity_source/source/VP_Geol/
-```
-
-The generated geological products are stored in:
+Output:
 
 ```
 CryoGridCommunity_forcing/
+
 └── geology/
+
     └── BRGM_GEO050K_HARM/
 ```
 
-The workflow:
+Geological rasters:
 
-1. Downloads required BRGM department datasets
-2. Merges geological polygons covering the French Alps
-3. Builds geological inventories
-4. Rasterizes geological units onto CryoGrid DEM grids
-5. Produces a reduced inventory containing only geological units present in the modelling domain
-
-The generated geological rasters:
-
-* use the same grid as the DEM products,
-* use Lambert-93 projection,
-* preserve traceability to the original BRGM geological units.
-
-A future classification step will map the 1000+ BRGM geological units into a reduced set of CryoGrid-ready geological classes suitable for thermal and hydrological parameterization.
-
-## Dependency
-
-The geological workflow relies on the existence of CryoGrid-compatible DEM products generated by **VP_DEM**.
-
-Before running **VP_Geol**, the DEM workflow must therefore be completed:
-
-```
-prepare_dem()
-        │
-        ▼
-CryoGridCommunity_forcing/
-└── DEM/
-    └── LiDAR_HD_DEM_10m/
-        └── DEM/
-
-        │
-        ▼
-prepare_geology()
-```
-
-The DEM grids define the target spatial framework for geological rasterization. Geological products are generated directly on the same grid as the DEM rasters to ensure perfect spatial consistency between topography and geology.
+* use the same grid as DEM products
+* use Lambert-93
+* preserve traceability to BRGM units
 
 ---
 
 # CryoGrid integration
 
-The generated forcing, geology and DEM datasets are designed to provide inputs for:
-
-```
-CryoGridCommunity_source/
-```
-
-and associated CryoGrid simulation workflows.
-
-The general workflow is:
+The complete workflow is:
 
 ```
 External datasets
         │
         ▼
-prepare_forcing()    prepare_dem()    prepare_geology()
-        │                  │                  │
-        └──────────────────┴──────────────────┘
-                           │
-                           ▼
-CryoGridCommunity_forcing/
-├── meteo/      (meteorological forcing)
-├── DEM/        (DEMs, terrain derivatives, and diagnostics)
-└── geology/    (geological products)
-                           │
-                           ▼
-CryoGrid simulations
+prepare_forcing()     prepare_dem()     prepare_geology()
+        │                   │                  │
+        └───────────────────┴──────────────────┘
+                            │
+                            ▼
+                    CryoGridCommunity_forcing/
+                    ├── meteo/
+                    ├── DEM/
+                    └── geology/
+                            │
+                            ▼
+                    CryoGrid simulations
 ```
 
 ---
@@ -320,47 +367,61 @@ Main requirements:
 * MATLAB
 * Mapping Toolbox
 
-Additional MATLAB toolboxes may be required depending on the processing workflow.
+Additional toolboxes may be required depending on the workflow.
 
 ---
 
-# Coordinate systems
+# Coordinate system
 
-All spatial datasets generated by [`prepare_dem.m`](/CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/prepare_dem.m) and [`prepare_geology.m`](/CryoGrid/CryoGridCommunity_source/source/VP_Geol/prepare_geology.m) use:
+All spatial products generated by:
+
+[`prepare_dem.m`](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/prepare_dem.m)
+
+and:
+
+[`prepare_geology.m`](CryoGrid/CryoGridCommunity_source/source/VP_Geol/prepare_geology.m)
+
+use:
 
 ```
 Lambert-93
 EPSG:2154
 ```
 
-The SAFRAN massif polygons, DEM products, and geological rasters therefore share the same projected coordinate system.
-
 ---
 
 # Quick start
 
-Clone the repository:
+Clone:
 
 ```bash
 git clone <repository-url>
 ```
 
-Open MATLAB and add the CryoGrid source tree:
+Add the MATLAB source tree:
 
 ```matlab
 addpath(genpath("CryoGrid/CryoGridCommunity_source/source"))
 ```
 
-Start with the workflow corresponding to the required dataset:
+Run the required workflow:
 
-Meteorological forcing ([`prepare_forcing.m`](/CryoGrid/CryoGridCommunity_source/source/VP_Forcing/prepare_forcing.m)):
+Meteorological forcing:
+
+[`prepare_forcing.m`](CryoGrid/CryoGridCommunity_source/source/VP_Forcing/prepare_forcing.m)
 
 [SAFRAN S2M workflow](CryoGrid/CryoGridCommunity_source/source/VP_Forcing/README.md)
 
-DEM generation ([`prepare_dem.m`](/CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/prepare_dem.m)):
+
+DEM and topography:
+
+[`prepare_dem.m`](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/prepare_dem.m)
 
 [IGN LiDAR HD DEM workflow](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/README.md)
 
-Geological processing ([`prepare_geology.m`](/CryoGrid/CryoGridCommunity_source/source/VP_Geol/prepare_geology.m)):
+
+Geology:
+
+[`prepare_geology.m`](CryoGrid/CryoGridCommunity_source/source/VP_Geol/prepare_geology.m)
 
 [BRGM GEO050K_HARM workflow](CryoGrid/CryoGridCommunity_source/source/VP_Geol/README.md)
