@@ -1,9 +1,9 @@
 function prepare_dem(dem_path,path_shapefile,varargin)
-%PREPARE_DEM Build CryoGrid-ready DEM products from IGN LiDAR HD.
+%PREPARE_DEM Build CryoGrid-ready topographic products from IGN LiDAR HD.
 %
 % DESCRIPTION
-%   Runs the complete DEM preparation workflow required to generate
-%   CryoGrid-compatible topographic inputs from IGN LiDAR HD data.
+%   Runs the complete workflow required to generate CryoGrid-compatible
+%   topographic products from IGN LiDAR HD elevation data.
 %
 %   The workflow performs:
 %
@@ -16,9 +16,14 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %           - clip to massif boundary
 %           - save DEM and mask GeoTIFF files
 %
-%       3. Compute terrain derivatives:
+%       3. Merge massif DEMs into a continuous Alpine DEM
+%
+%       4. Compute Alpine topography products
 %           - slope
 %           - aspect
+%
+%       5. Clip Alpine topography products back to individual
+%          SAFRAN massifs
 %
 %
 % INPUT
@@ -34,37 +39,51 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %
 %   'Resolution'
 %       DEM resolution in metres.
-%
-%       default = 10
+%       Default = 10
 %
 %   'Overwrite'
-%       Recompute existing massif DEMs.
-%
-%       default = false
+%       Recompute existing products.
+%       Default = false
 %
 %
 % OUTPUT
 %
-%   Creates:
-%
+%   Creates a directory:
 %       LiDAR_HD_DEM_XXm/
 %
-%           DEM/
-%               DEM_massif_XX.tif
-%               DEM_mask_massif_XX.tif
+%   containing:
 %
-%               cache/
-%                   Cached IGN WMS chunks
+%       DEM/
+%           DEM_massif_XX.tif
+%           DEM_mask_massif_XX.tif
+%           ALPS/
+%               DEM_ALPS.tif
+%               DEM_ALPS_mask.tif
+%           cache/
 %
-%  NOTE
-%       IGN LiDAR HD WMS requests become unreliable for very large
-%       images. A value of 4000 pixels provides a good compromise between
-%       request size and efficiency while keeping a safety margin. The
-%       default WMS limits are
-%           max_width  = 4000;
-%           max_height = 4000;
+%       SLOPE/
+%           ALPS/
+%               SLOPE_ALPS.tif
+%           SLOPE_massif_XX.tif
+%
+%       ASPECT/
+%           ALPS/
+%               ASPECT_ALPS.tif
+%           ASPECT_massif_XX.tif
+%
+%   Additional topographic products may be added in future releases
+%   following the same directory structure.
 %
 %
+% NOTE
+%
+%   IGN LiDAR HD WMS requests become unreliable for very large images.
+%   Requests are therefore limited to:
+%
+%       max_width  = 4000 pixels
+%       max_height = 4000 pixels
+%
+%   which provides a good compromise between efficiency and robustness.
 
 
 addpath(genpath(fileparts(mfilename('fullpath'))));
@@ -128,7 +147,7 @@ print_step(2,"Build DEM products for SAFRAN massifs")
 for i = 1:numel(S)
     process_single_massif( ...
         S(i),...
-        output_path,...
+        result_path,...
         cache_path,...
         max_width,...
         max_height,...
@@ -137,9 +156,23 @@ for i = 1:numel(S)
 end
 
 
+
 %% Step 3
 
-print_step(3,"Compute terrain derivatives")
-% compute_slope_aspect(...)
+print_step(3,"Merge massifs DEM into a single Alpine DEM")
+merge_massif_DEMs(result_path)
+
+
+
+%% Step 4
+
+print_step(4,"Compute terrain derivatives")
+compute_dem_derivatives(output_path)
+
+
+%% Step 5
+
+print_step(5,"Clip topography products to massifs")
+clip_topography_products(output_path)
 
 end

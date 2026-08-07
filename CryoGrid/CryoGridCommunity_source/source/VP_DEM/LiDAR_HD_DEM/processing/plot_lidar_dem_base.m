@@ -172,6 +172,8 @@ end
 
 %% Color
 
+colormap turbo
+
 clim([global_min global_max])
 
 cb=colorbar;

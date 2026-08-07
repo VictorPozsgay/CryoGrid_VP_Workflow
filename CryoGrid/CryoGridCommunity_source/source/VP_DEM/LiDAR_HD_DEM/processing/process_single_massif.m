@@ -1,4 +1,4 @@
-function process_single_massif(Ssingle,output_path,cache_path,max_width,max_height,resolution,overwrite)
+function process_single_massif(Ssingle,result_path,cache_path,max_width,max_height,resolution,overwrite)
 %PROCESS_SINGLE_MASSIF Generate one SAFRAN massif DEM from IGN LiDAR HD.
 %
 % DESCRIPTION
@@ -25,7 +25,7 @@ function process_single_massif(Ssingle,output_path,cache_path,max_width,max_heig
 %           nom
 %           BoundingBox
 %
-%   output_path
+%   result_path
 %       Directory where DEM GeoTIFF products are saved.
 %
 %   cache_path
@@ -63,10 +63,10 @@ massif = Ssingle.massif_num;
 massif_name = Ssingle.nom;
 
 outfile = fullfile(...
-    output_path,...
+    result_path,...
     sprintf("DEM_massif_%02d.tif",massif));
 
-maskfile = fullfile(output_path,...
+maskfile = fullfile(result_path,...
     sprintf("DEM_mask_massif_%02d.tif",massif));
 
 if exist(outfile,"file") && exist(maskfile,"file") && ~overwrite
