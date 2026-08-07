@@ -30,6 +30,11 @@ forcing/Forcing_Data
 OLD/
 templates/
 CryoGridCommunity_forcing/
+docs/
+forcing/
+local_patch/
+src/
+old/
 
 # Local machine configuration
 VP_config.m
