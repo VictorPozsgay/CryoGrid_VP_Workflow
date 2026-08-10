@@ -62,6 +62,32 @@ Each workflow has its own documentation.
 
 ---
 
+# Canonical paths
+
+The three preparation workflows use the following root paths:
+
+```text
+CryoGridCommunity_forcing/
+├── meteo/
+├── DEM/
+└── geology/
+```
+
+```matlab
+forcing_path  = "CryoGridCommunity_forcing/DEM";
+dem_path      = "CryoGridCommunity_forcing/DEM";
+geology_path  = "CryoGridCommunity_forcing/geology";
+safran_shp    = "CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/massifs_alpes_2154.shp";
+```
+
+The corresponding workflows are:
+
+```matlab
+prepare_forcing(forcing_path,varargin)
+prepare_dem(dem_path,safran_shp,varargin)
+prepare_geology(geology_path,dem_path,varargin)
+```
+
 # VP_Forcing: meteorological forcing workflow
 
 Documentation:
@@ -311,28 +337,34 @@ Documentation:
 
 [BRGM GEO050K_HARM workflow](CryoGrid/CryoGridCommunity_source/source/VP_Geol/README.md)
 
-The workflow prepares geological inputs for CryoGrid:
+The workflow prepares CryoGrid-compatible geological inputs:
 
 1. Downloads BRGM GEO050K_HARM data
 2. Merges Alpine geological polygons
 3. Builds geological inventories
-4. Rasterizes geological units on DEM grids
+4. Rasterizes geological units onto the DEM grids
+5. Builds a final mask retaining only pixels with valid DEM, slope, aspect, and geology
 
 Output:
 
-```
+```text
 CryoGridCommunity_forcing/
-
 └── geology/
-
     └── BRGM_GEO050K_HARM/
 ```
 
-Geological rasters:
+The final masks are stored with the corresponding DEM resolution:
 
-* use the same grid as DEM products
-* use Lambert-93
-* preserve traceability to BRGM units
+```text
+CryoGridCommunity_forcing/
+└── DEM/
+    └── LiDAR_HD_DEM_XXm/
+        └── MASK/
+            ├── MASK_massif_XX.tif
+            └── masking_log.mat
+```
+
+Geological rasters use the same grid as the DEM products, Lambert-93 (EPSG:2154), and preserve traceability to the original BRGM geological units.
 
 ---
 
