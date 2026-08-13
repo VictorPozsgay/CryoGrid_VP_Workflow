@@ -1,4 +1,7 @@
-function OUT = plot_lidar_dem_base(dem_folder,safran_shp)
+function OUT = plot_lidar_dem_base( ...
+    dem_folder,...
+    safran_shp,...
+    dem_bounds)
 %PLOT_LIDAR_DEM_BASE Create LiDAR DEM overview figure.
 %
 % Reads all DEM_massif_XX.tif files, plots them with a common elevation
@@ -99,9 +102,6 @@ S = shaperead(safran_shp);
 Splot = S(ismember([S.massif_num],massif_ids));
 
 
-
-%% Figure
-
 %% Figure
 
 fig = figure( ...
@@ -172,12 +172,23 @@ end
 
 %% Color
 
-colormap turbo
+[cmap,theoretical_clim,label] = ...
+    get_topography_colormap("DEM");
 
-clim([global_min global_max])
+colormap(gca,cmap)
 
-cb=colorbar;
-cb.Label.String="Elevation (m)";
+if nargin >= 3 && ~isempty(dem_bounds)
+
+    clim(gca,dem_bounds)
+
+else
+
+    clim(gca,theoretical_clim)
+
+end
+
+cb = colorbar;
+cb.Label.String = label;
 
 
 

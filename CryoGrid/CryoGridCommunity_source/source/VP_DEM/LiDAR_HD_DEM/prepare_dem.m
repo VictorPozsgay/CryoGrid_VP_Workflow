@@ -10,11 +10,12 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %
 %       - individual SAFRAN massif DEM products
 %       - individual massif binary masks
-%       - one merged Alpine DEM
-%       - Alpine terrain derivatives
-%       - massif-scale terrain products clipped from the Alpine products
+%       - one continuous merged Alpine DEM
+%       - full-Alps terrain derivatives
+%       - full-Alps terrain-based sky-view factor (SVF)
+%       - massif-scale topographic products clipped from the Alpine products
 %       - CryoGrid-compatible aspect products
-%       - slope-based sky-view factor (SVF) products
+%       - massif-scale naive slope-based SVF reference products
 %
 %
 % WORKFLOW
@@ -27,7 +28,7 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %       - reuse cached WMS downloads when available
 %       - clean invalid WMS pixels
 %       - merge chunks
-%       - clip to massif boundary
+%       - clip to the massif boundary
 %       - save DEM and mask GeoTIFF files
 %
 %   3. Merge all massif DEMs into one continuous Alpine DEM:
@@ -36,7 +37,7 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %           DEM_ALPS.tif
 %           DEM_ALPS_mask.tif
 %
-%   4. Compute Alpine terrain derivatives:
+%   4. Compute Alpine terrain derivatives from the continuous Alpine DEM:
 %
 %       SLOPE/ALPS/
 %           SLOPE_ALPS.tif
@@ -44,29 +45,54 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %       ASPECT/ALPS/
 %           ASPECT_ALPS.tif
 %
-%   5. Clip Alpine topographic products back to SAFRAN massifs:
+%   5. Compute the full-Alps terrain-based sky-view factor:
 %
-%       PRODUCT/
-%           PRODUCT_massif_XX.tif
+%       SVF/ALPS/
+%           SVF_ALPS.tif
 %
-%   6. Convert standard GIS aspect to the CryoGrid aspect convention:
+%       The SVF is calculated by horizon ray tracing over the continuous
+%       Alpine DEM. The calculation is performed before massif clipping
+%       so that surrounding terrain outside individual SAFRAN massifs is
+%       included in the horizon calculation.
 %
-%       ASPECT_CryoGrid/
-%           ASPECT_CryoGrid_massif_XX.tif
+%   6. Clip Alpine topographic products back to the SAFRAN massifs:
 %
-%   7. Compute slope-based sky-view factor:
+%       DEM/
+%           DEM_massif_XX.tif
+%
+%       SLOPE/
+%           SLOPE_massif_XX.tif
+%
+%       ASPECT/
+%           ASPECT_massif_XX.tif
 %
 %       SVF/
 %           SVF_massif_XX.tif
 %
-%       The current SVF is calculated as:
+%       Products are extracted from the exact Alpine grid. No resampling
+%       or reprojection is performed.
 %
-%           SVF = cos²(slope / 2)
+%   7. Convert standard GIS aspect to the CryoGrid aspect convention:
 %
-%       It is a local slope-based approximation and does not account for
-%       surrounding terrain horizons.
+%       ASPECT_CryoGrid/
+%           ASPECT_CryoGrid_massif_XX.tif
 %
-%   8. Optionally run quality-control diagnostics.
+%   8. Compute a naive slope-based sky-view factor for each massif:
+%
+%       SVF_naive/
+%           SVF_naive_massif_XX.tif
+%
+%       The naive SVF is calculated as:
+%
+%           SVF_naive = (1 + cos(slope)) / 2
+%                     = cos²(slope / 2)
+%
+%       This is a purely local self-shading approximation and does not
+%       account for surrounding terrain or terrain horizons. It is
+%       provided as a reference product for comparison with the
+%       terrain-based ray-traced SVF.
+%
+%   9. Optionally run LiDAR quality-control diagnostics.
 %
 %
 % INPUTS
@@ -97,74 +123,121 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %       Default = 10
 %
 %   "Overwrite"
-%       Recompute existing massif DEM products.
+%       Recompute existing products where supported.
 %
 %       Default = false
+%
+%       This option is propagated to the SVF and naive SVF workflows.
 %
 %   "Diagnostics"
 %       Run run_lidar_diagnostics() after product generation.
 %
 %       Default = false
 %
+%   "SVFNumBins"
+%       Number of azimuth bins used for the full-Alps ray-traced SVF.
+%
+%       Default = 36
+%
+%   "SVFMaxDistance"
+%       Maximum terrain distance considered by the SVF ray tracing,
+%       in metres.
+%
+%       Default = 1000
+%
 %
 % OUTPUT
 %
-%   Creates:
+%   Creates a directory:
 %
 %       LiDAR_HD_DEM_XXm/
 %
-%           DEM/
-%               DEM_massif_XX.tif
-%               DEM_mask_massif_XX.tif
+%   containing:
 %
-%               ALPS/
-%                   DEM_ALPS.tif
-%                   DEM_ALPS_mask.tif
+%       DEM/
+%           DEM_massif_XX.tif
+%           DEM_mask_massif_XX.tif
 %
-%           SLOPE/
-%               ALPS/
-%                   SLOPE_ALPS.tif
+%           ALPS/
+%               DEM_ALPS.tif
+%               DEM_ALPS_mask.tif
 %
-%               SLOPE_massif_XX.tif
-%
-%           ASPECT/
-%               ALPS/
-%                   ASPECT_ALPS.tif
-%
-%               ASPECT_massif_XX.tif
-%
-%           ASPECT_CryoGrid/
-%               ASPECT_CryoGrid_massif_XX.tif
-%
-%           SVF/
-%               SVF_massif_XX.tif
-%
-%           DEM/cache/
+%           cache/
 %               Cached IGN WMS chunks
 %
-%           diagnostics/
-%               Quality-control figures and tables
-%               (if Diagnostics=true)
+%       SLOPE/
+%           SLOPE_massif_XX.tif
+%
+%           ALPS/
+%               SLOPE_ALPS.tif
+%
+%       ASPECT/
+%           ASPECT_massif_XX.tif
+%
+%           ALPS/
+%               ASPECT_ALPS.tif
+%
+%       ASPECT_CryoGrid/
+%           ASPECT_CryoGrid_massif_XX.tif
+%
+%       SVF/
+%           SVF_massif_XX.tif
+%
+%           ALPS/
+%               SVF_ALPS.tif
+%
+%       SVF_naive/
+%           SVF_naive_massif_XX.tif
+%
+%       diagnostics/
+%           Generated quality-control figures and tables
+%           (if Diagnostics=true)
+%
+%
+% DIAGNOSTICS
+%
+%   When Diagnostics=true, run_lidar_diagnostics() performs quality-control
+%   checks and generates visualization products.
+%
+%   The diagnostic plotting functions and their visualization-specific
+%   helper functions are maintained separately in the source-code
+%   plotting/ directory.
+%
+%   Generated diagnostic outputs are written to:
+%
+%       diagnostics/
+%
+%   including:
+%
+%       - Alpine topography overview maps
+%       - massif topography overview maps
+%       - DEM missing-pixel maps
+%       - DEM validation tables
+%       - derivative validation products
 %
 %
 % NOTES
 %
-%   Terrain derivatives are computed from the merged Alpine DEM before
-%   clipping to SAFRAN massifs. This avoids artificial discontinuities at
-%   massif boundaries.
+%   Terrain derivatives and the ray-traced SVF are computed from the
+%   continuous merged Alpine DEM before clipping to SAFRAN massifs.
+%   This avoids artificial discontinuities at massif boundaries and
+%   allows the SVF ray tracing to account for surrounding terrain.
 %
-%   No resampling is performed when clipping products. Massif products are
-%   extracted by matching the exact Alpine grid and applying the DEM mask.
+%   Massif-scale products are extracted from the exact Alpine grid and
+%   clipped using the SAFRAN massif geometry and DEM validity mask.
+%   No resampling or reprojection is performed.
 %
 %   The original GIS aspect products are preserved. The separate
-%   ASPECT_CryoGrid/ products use the aspect convention expected by
+%   ASPECT_CryoGrid products use the aspect convention expected by
 %   CryoGrid.
 %
-%   SVF/ contains a slope-based sky-view factor approximation. It is not
-%   a horizon-based SVF and therefore does not account for surrounding
-%   topographic obstruction.
+%   The SVF products are terrain-horizon-based sky-view factors computed
+%   by ray tracing over the full Alpine DEM.
 %
-%   All products use:
+%   The SVF_naive products are slope-only reference values and do not
+%   represent surrounding terrain obstruction.
+%
+%   All topographic products use:
 %
 %       Projection: Lambert-93
 %       EPSG:       2154
@@ -184,9 +257,10 @@ function prepare_dem(dem_path,path_shapefile,varargin)
 %   process_single_massif
 %   merge_massif_DEMs
 %   compute_dem_derivatives
+%   compute_skyview_factor_alps
 %   clip_topography_products
 %   convert_aspect_to_cryogrid
-%   compute_skyview_factor
+%   compute_naive_svf
 %   run_lidar_diagnostics
 %
 
@@ -199,12 +273,16 @@ p = inputParser;
 addParameter(p,"Resolution",10)
 addParameter(p,"Overwrite",false)
 addParameter(p,"Diagnostics",false)
+addParameter(p,"SVFNumBins",36)
+addParameter(p,"SVFMaxDistance",1000)
 
 parse(p,varargin{:})
 
-resolution = p.Results.Resolution;
-overwrite  = p.Results.Overwrite;
-diagnostics = p.Results.Diagnostics;
+resolution       = p.Results.Resolution;
+overwrite        = p.Results.Overwrite;
+diagnostics      = p.Results.Diagnostics;
+svf_num_bins     = p.Results.SVFNumBins;
+svf_max_distance = p.Results.SVFMaxDistance;
 
 %% WMS limits
 
@@ -244,7 +322,6 @@ S = shaperead(path_shapefile);
 S = S(idx);
 
 
-
 %% Step 2
 
 print_step(2,"Build DEM products for SAFRAN massifs")
@@ -261,12 +338,10 @@ for i = 1:numel(S)
 end
 
 
-
 %% Step 3
 
 print_step(3,"Merge massifs DEM into a single Alpine DEM")
 merge_massif_DEMs(result_path)
-
 
 
 %% Step 4
@@ -277,28 +352,37 @@ compute_dem_derivatives(output_path)
 
 %% Step 5
 
-print_step(5,"Clip topography products to massifs")
-clip_topography_products(output_path)
+print_step(5,"Compute full-Alps skyview factor (SVF)")
+compute_skyview_factor_alps( ...
+    output_path, ...
+    "NumBins",svf_num_bins, ...
+    "MaxDistance",svf_max_distance, ...
+    "Overwrite",overwrite)
 
 
 %% Step 6
 
-print_step(6,"Convert aspect to CryoGrid convention")
-convert_aspect_to_cryogrid(output_path)
+print_step(6,"Clip topography products to massifs")
+clip_topography_products(output_path)
 
 
 %% Step 7
 
-print_step(7,"Compute skyview factor (SVF) from slope")
-compute_skyview_factor(output_path)
+print_step(7,"Convert aspect to CryoGrid convention")
+convert_aspect_to_cryogrid(output_path)
 
 
 %% Step 8
 
-if diagnostics
-    print_step(8,"Run LiDAR diagnostics")
-    run_lidar_diagnostics(output_path,path_shapefile);
-end
+print_step(8,"Compute naive slope-based skyview factor")
+compute_naive_svf(output_path,"Overwrite",overwrite)
 
+
+%% Step 9
+
+if diagnostics
+    print_step(9,"Run LiDAR diagnostics")
+    run_lidar_diagnostics(output_path,path_shapefile,1);
+end
 
 end

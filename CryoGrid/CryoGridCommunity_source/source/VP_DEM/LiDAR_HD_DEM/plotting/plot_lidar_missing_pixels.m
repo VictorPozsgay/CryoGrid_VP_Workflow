@@ -82,19 +82,23 @@ for k = 1:numel(OUT.DEM)
     %% Coordinates
 
     [row,col] = find(missing);
-
-
+    
     if isempty(row)
         continue
     end
-
-
+    
+    % Subsample immediately to avoid storing millions of points.
+    
+    keep = 1:point_factor:numel(row);
+    
+    row = row(keep);
+    col = col(keep);
+    
     [x,y] = intrinsicToWorld( ...
         R,...
         col,...
         row);
-
-
+    
     missing_all = [missing_all; x y];
 
 
@@ -112,12 +116,9 @@ fprintf("Total missing pixels: %d\n",...
 if ~isempty(missing_all)
 
 
-    keep = 1:point_factor:size(missing_all,1);
-
-
     scatter( ...
-        missing_all(keep,1),...
-        missing_all(keep,2),...
+        missing_all(:,1),...
+        missing_all(:,2),...
         20,...
         "r",...
         "filled")

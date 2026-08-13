@@ -1,72 +1,93 @@
 function compute_skyview_factor_alps(output_path,varargin)
-%COMPUTE_SKYVIEW_FACTOR_ALPS Compute a restartable full-Alps SVF product.
+%COMPUTE_SKYVIEW_FACTOR_ALPS
+% Restartable full-Alps terrain-based sky-view factor calculation.
 %
-% Computes a terrain-based sky-view factor (SVF) over the complete Alpine
-% DEM using azimuthal horizon ray tracing.
+% DESCRIPTION
+%   Computes a terrain-based sky-view factor (SVF) over the complete
+%   Alpine DEM using horizon ray tracing.
 %
-% The Alpine raster is processed as a regular grid of target chunks.
-% Each target chunk is evaluated using a buffered calculation window whose
-% extent is determined by MaxDistance. Ray tracing is parallelized within
-% each chunk when UseParallel=true.
+%   The full Alpine DEM is processed in regular target chunks. Each target
+%   chunk is surrounded by a calculation buffer corresponding to
+%   MaxDistance, so that terrain outside the target chunk contributes to
+%   the horizon calculation.
 %
-% The workflow is fully restartable. A persistent chunk index records the
-% status of every target chunk, and a chunk is marked DONE only after:
+%   The final Alpine SVF product follows the standard LiDAR HD product
+%   directory convention:
 %
-%   1. its SVF values have been computed,
-%   2. the temporary GeoTIFF has been validated,
-%   3. the corresponding tile has been written to the final BigTIFF, and
-%   4. the final tile has been verified.
+%       SVF/
+%       └── ALPS/
+%           ├── SVF_ALPS.tif
+%           └── SVF_ALPS_index.mat
 %
-% The final product is:
+%   SVF_ALPS.tif is a tiled BigTIFF. Each completed calculation chunk is
+%   written directly into its corresponding TIFF tile after validation.
 %
-%   SVF/SVF_ALPS.tif
+%   Restartability is controlled by the chunk index:
 %
-% and the restart index is:
+%       SVF/ALPS/SVF_ALPS_index.mat
 %
-%   SVF/SVF_ALPS_index.mat
+%   A chunk is marked DONE only after its temporary GeoTIFF has been
+%   validated, inserted into the final BigTIFF, and verified.
 %
-% Temporary chunk GeoTIFFs are deleted after successful insertion and
-% verification.
+%   Temporary chunk GeoTIFFs are deleted after successful insertion.
 %
-% TestChunk allows a single chunk to be processed while using the same
-% restart logic as a normal run. If the requested chunk is already DONE,
-% no calculation or parallel pool is started.
+% DEFAULT PARAMETERS
 %
-% Parameters:
+%   NumBins       = 36
+%   MaxDistance   = 1000 m
+%   ChunkSize     = 1024 pixels
+%   UseParallel   = true
+%   Overwrite     = false
+%   TestChunk     = 0
 %
-%   "NumBins"      Number of azimuth bins. Default: 36.
-%   "MaxDistance"  Maximum horizon ray-tracing distance in metres.
-%                  Default: 1000.
-%   "ChunkSize"    Target chunk size in pixels. Default: 1024.
-%   "UseParallel"  Use MATLAB parallel workers for ray tracing.
-%                  Default: true.
-%   "Overwrite"    Delete the existing SVF index and final product and
-%                  start a new calculation. Default: false.
-%   "TestChunk"    Process only the specified chunk. 0 disables test mode.
-%                  Default: 0.
+%   TestChunk can be used to process a single chunk while preserving the
+%   same restart/index logic as the full-Alps calculation.
 %
-% NoData:
+% NODATA
 %
-%   Input DEM/SLOPE/ASPECT NoData values are treated internally as NaN.
-%   The final SVF product uses -9999 as NoData.
+%   DEM/SLOPE/ASPECT NoData = -9999
+%   SVF NoData              = -9999
 %
-% Main workflow helpers:
+% INPUT
 %
-%   initialize_svf_index()
-%   create_svf_alps_geotiff()
-%   read_dem_window()
-%   compute_svf_target_window()
-%   compute_svf_target_chunk()
-%   compute_target_horizon()
-%   make_chunk_reference()
-%   write_svf_geotiff()
-%   validate_svf_chunk()
-%   write_svf_tile()
-%   verify_svf_tile()
-%   save_index()
+%   output_path
+%       Root LiDAR HD DEM product folder.
 %
-% The outer chunk loop is deliberately serial to preserve deterministic
-% restartability and one-chunk-at-a-time BigTIFF writing.
+%       Expected input products:
+%
+%           DEM/ALPS/DEM_ALPS.tif
+%           SLOPE/ALPS/SLOPE_ALPS.tif
+%           ASPECT/ALPS/ASPECT_ALPS.tif
+%
+%       The SVF product is written to:
+%
+%           SVF/ALPS/SVF_ALPS.tif
+%
+%   varargin
+%       Optional name-value parameters listed above.
+%
+% OUTPUT
+%
+%   No MATLAB output is returned.
+%
+%   The function creates or updates:
+%
+%       SVF/ALPS/SVF_ALPS.tif
+%       SVF/ALPS/SVF_ALPS_index.mat
+%
+% SEE ALSO
+%
+%   compute_svf_target_window
+%   compute_svf_target_chunk
+%   compute_target_horizon
+%   create_svf_alps_geotiff
+%   initialize_svf_index
+%   read_dem_window
+%   validate_svf_chunk
+%   verify_svf_tile
+%   write_svf_geotiff
+%   write_svf_tile
+%
 
 addpath(genpath(fileparts(mfilename('fullpath'))));
 
@@ -180,7 +201,7 @@ fprintf("NoData            : %d\n",nodata)
 % Output directory
 % =========================================================================
 
-svf_path = fullfile(output_path,"SVF");
+svf_path = fullfile(output_path,"SVF","ALPS");
 
 if ~isfolder(svf_path)
     mkdir(svf_path)
@@ -565,6 +586,21 @@ for ichunk = 1:nChunks
             test_chunk)
         break
     end
+end
+
+%% =========================================================================
+% Final GeoTIFF metadata alignment
+% =========================================================================
+
+if nDone == nChunks
+    align_svf_geotiff_to_dem(final_file,dem_file);
+else
+    fprintf("\n")
+    fprintf( ...
+        "SVF computation incomplete (%d / %d chunks DONE).\n", ...
+        nDone,nChunks)
+    fprintf( ...
+        "GeoTIFF metadata alignment will be performed after all chunks are complete.\n")
 end
 
 %% =========================================================================
