@@ -1,22 +1,47 @@
 function horizon = compute_target_horizon( ...
     Z,row,col,z0,dx,dy,azimuth,nSteps,max_distance)
-%COMPUTE_TARGET_HORIZON
-% Ray-trace terrain horizon for all target pixels at one azimuth.
+%COMPUTE_TARGET_HORIZON Ray-trace the terrain horizon for target pixels.
 %
-% Optimizations:
-%   1. Precompute continuous ray offsets.
-%   2. Preserve the original rounding operation:
+% PURPOSE
+%   Computes the terrain horizon elevation angle for all target pixels
+%   along one azimuth using the DEM calculation window.
 %
-%          round(row + continuous_offset)
+% INPUTS
+%   Z              - DEM calculation window
+%   row, col       - target-pixel row and column indices within Z
+%   z0             - target-pixel elevations
+%   dx, dy         - DEM pixel dimensions [m]
+%   azimuth        - ray-tracing azimuth [degrees], clockwise from North
+%   nSteps         - maximum number of ray-tracing samples
+%   max_distance   - maximum ray-tracing distance [m]
 %
-%      rather than:
+% OUTPUT
+%   horizon        - terrain horizon elevation angle [degrees] for each
+%                    target pixel
 %
-%          row + round(continuous_offset)
+% METHOD
+%   Rays are sampled through the DEM at intervals based on the minimum
+%   pixel dimension. Continuous ray offsets are converted to raster
+%   positions using:
 %
-%   3. Remove consecutive duplicate raster positions along the ray.
+%       round(row + dRow)
+%       round(col + dCol)
 %
-% The first occurrence of each raster position is retained, so the
-% corresponding distance is also retained.
+%   Consecutive duplicate raster positions are removed while retaining
+%   the first occurrence and therefore the smallest associated distance.
+%
+%   For every sampled raster position, the terrain elevation angle from
+%   the target pixel is evaluated and the maximum angle is retained as
+%   the horizon.
+%
+% BOUNDARY HANDLING
+%   Ray samples outside the DEM calculation window are ignored. The
+%   calculation window must therefore contain the required ray-tracing
+%   buffer around the target chunk.
+%
+% PERFORMANCE
+%   The ray offsets and distances are computed once per azimuth and then
+%   applied vectorially to all target pixels.
 
 nRows = size(Z,1);
 nCols = size(Z,2);
@@ -25,8 +50,7 @@ nCols = size(Z,2);
 % Azimuth clockwise from North
 % -------------------------------------------------------------------------
 
-theta = deg2rad(azimuth);
-
+theta  = deg2rad(azimuth);
 dx_ray = sin(theta);
 dy_ray = cos(theta);
 
@@ -35,11 +59,7 @@ dy_ray = cos(theta);
 % -------------------------------------------------------------------------
 
 step_distance = min(dx,dy);
-
-nSteps = min( ...
-    nSteps, ...
-    floor(max_distance / step_distance));
-
+nSteps = min(nSteps, floor(max_distance / step_distance));
 distance_all = (1:nSteps)' * step_distance;
 
 % -------------------------------------------------------------------------
@@ -72,15 +92,12 @@ dCol =  distance_all .* dx_ray ./ dx;
 
 r_offset = round(dRow);
 c_offset = round(dCol);
-
 keep = true(nSteps,1);
 
 if nSteps > 1
-
     keep(2:end) = ...
         r_offset(2:end) ~= r_offset(1:end-1) | ...
         c_offset(2:end) ~= c_offset(1:end-1);
-
 end
 
 distance = distance_all(keep);
@@ -90,19 +107,10 @@ dCol     = dCol(keep);
 nRay = numel(distance);
 
 % -------------------------------------------------------------------------
-% Diagnostics
-% -------------------------------------------------------------------------
-
-% Uncomment temporarily if desired:
-%
-% fprintf("  Ray samples: %d -> %d\n",nSteps,nRay)
-
-% -------------------------------------------------------------------------
 % One horizon value for every target pixel
 % -------------------------------------------------------------------------
 
 nTarget = numel(row);
-
 horizon = zeros(nTarget,1,"single");
 
 % -------------------------------------------------------------------------
@@ -125,16 +133,12 @@ for k = 1:nRay
     % Pixels whose ray is still inside the DEM
     % -------------------------------------------------------------
 
-    inside = ...
-        r >= 1 & r <= nRows & ...
-        c >= 1 & c <= nCols;
-
+    inside = r >= 1 & r <= nRows & c >= 1 & c <= nCols;
     if ~any(inside)
         break
     end
 
     target_ids = find(inside);
-
     r_inside = r(inside);
     c_inside = c(inside);
 
@@ -142,10 +146,7 @@ for k = 1:nRay
     % DEM lookup
     % -------------------------------------------------------------
 
-    ind = sub2ind( ...
-        [nRows,nCols], ...
-        r_inside, ...
-        c_inside);
+    ind = sub2ind([nRows,nCols], r_inside, c_inside);
 
     z = Z(ind);
 
@@ -166,17 +167,13 @@ for k = 1:nRay
     % Elevation angle
     % -------------------------------------------------------------
 
-    angle = atan2d( ...
-        z - z0(target_ids), ...
-        distance(k));
+    angle = atan2d(z - z0(target_ids), distance(k));
 
     % -------------------------------------------------------------
     % Update horizon
     % -------------------------------------------------------------
 
-    horizon(target_ids) = max( ...
-        horizon(target_ids), ...
-        single(angle));
+    horizon(target_ids) = max(horizon(target_ids), single(angle));
 
 end
 

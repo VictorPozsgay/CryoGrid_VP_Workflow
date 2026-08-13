@@ -1,9 +1,26 @@
 function validate_svf_chunk( ...
     filename,expected,Rexpected,nodata)
+%VALIDATE_SVF_CHUNK Validate a temporary SVF chunk GeoTIFF.
+%
+% Verifies that a temporary SVF chunk written by the Alpine SVF workflow:
+%
+%   1. has the expected raster dimensions,
+%   2. has the expected spatial resolution,
+%   3. has the expected spatial extent,
+%   4. contains exactly the expected values, and
+%   5. contains no valid SVF values outside the physical range [0,1].
+%
+% Inputs:
+%   filename  - Temporary SVF GeoTIFF to validate.
+%   expected  - Expected SVF chunk values.
+%   Rexpected - Expected spatial referencing object.
+%   nodata    - NoData value used for invalid pixels.
+%
+% This validation is performed before the temporary chunk is inserted
+% into the final Alpine SVF BigTIFF.
 
 % Read the temporary chunk.
 [A,Ractual] = readgeoraster(filename);
-
 A = single(A);
 
 % -------------------------------------------------------------------------
@@ -11,9 +28,7 @@ A = single(A);
 % -------------------------------------------------------------------------
 
 if ~isequal(size(A),size(expected))
-
     error("Temporary SVF chunk has incorrect raster size.")
-
 end
 
 % -------------------------------------------------------------------------
@@ -47,9 +62,7 @@ end
 expected = single(expected);
 
 if ~isequal(A,expected)
-
     error("Temporary SVF chunk values failed validation.")
-
 end
 
 % -------------------------------------------------------------------------
@@ -57,11 +70,8 @@ end
 % -------------------------------------------------------------------------
 
 valid = A ~= nodata;
-
 if any(A(valid) < 0 | A(valid) > 1)
-
     error("Temporary SVF chunk contains values outside [0,1].")
-
 end
 
 end

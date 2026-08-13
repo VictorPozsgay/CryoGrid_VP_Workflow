@@ -3,15 +3,29 @@ function verify_svf_tile( ...
     tile_number, ...
     expected, ...
     tile_size)
-%VERIFY_SVF_TILE
-% Verify one SVF TIFF tile after in-place writing.
+%VERIFY_SVF_TILE Verify one SVF tile after in-place BigTIFF writing.
 %
-% Full interior tiles are expected to be tile_size x tile_size.
+% Reads the specified TIFF tile from the final Alpine SVF BigTIFF and
+% compares it with the expected SVF chunk.
 %
-% Edge tiles may be returned by MATLAB's TIFF reader using their actual
-% raster dimensions rather than the nominal TIFF tile dimensions.
+% Full interior tiles are expected to have dimensions:
 %
-% Therefore both cases are accepted.
+%   tile_size x tile_size
+%
+% Edge tiles may contain only the valid raster portion when returned by
+% MATLAB's TIFF reader. Both representations are accepted.
+%
+% Inputs:
+%   filename    - Final Alpine SVF BigTIFF.
+%   tile_number - TIFF tile number corresponding to the SVF chunk.
+%   expected    - Expected SVF chunk values.
+%   tile_size   - TIFF tile width and height in pixels.
+%
+% The function raises an error if the tile dimensions or values do not
+% match the expected result.
+%
+% This verification is performed before the corresponding processing
+% chunk is marked as DONE in the restart index.
 
 nodata = single(-9999);
 
@@ -20,7 +34,6 @@ nodata = single(-9999);
 % -------------------------------------------------------------------------
 
 t = Tiff(filename,"r");
-
 cleanup = onCleanup(@()close(t));
 
 %% ------------------------------------------------------------------------
@@ -40,7 +53,6 @@ expected = single(expected);
 % -------------------------------------------------------------------------
 
 [nExpectedRows,nExpectedCols] = size(expected);
-
 [nActualRows,nActualCols] = size(actual);
 
 %% ------------------------------------------------------------------------
@@ -50,19 +62,13 @@ expected = single(expected);
 if nActualRows == tile_size && ...
    nActualCols == tile_size
 
-    expected_tile = ...
-        nodata * ones(tile_size,tile_size,"single");
-
-    expected_tile( ...
-        1:nExpectedRows, ...
-        1:nExpectedCols) = expected;
+    expected_tile = nodata * ones(tile_size,tile_size,"single");
+    expected_tile(1:nExpectedRows,1:nExpectedCols) = expected;
 
     if ~isequal(actual,expected_tile)
-
         error( ...
             "Final TIFF tile verification failed for tile %d.", ...
             tile_number)
-
     end
 
     return
@@ -79,11 +85,9 @@ if nActualRows == nExpectedRows && ...
    nActualCols == nExpectedCols
 
     if ~isequal(actual,expected)
-
         error( ...
             "Final TIFF edge tile values failed verification for tile %d.", ...
             tile_number)
-
     end
 
     return

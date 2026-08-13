@@ -5,27 +5,43 @@ function create_svf_alps_geotiff( ...
     R, ...
     nodata, ...
     tile_size)
-%CREATE_SVF_ALPS_GEOTIFF
-% Create the final tiled Alpine SVF BigTIFF.
+%CREATE_SVF_ALPS_GEOTIFF Create the production Alpine SVF BigTIFF.
 %
-% The raster is:
+% PURPOSE
+%   Creates and initializes the final tiled BigTIFF used by the Alpine
+%   SVF ray-tracing workflow.
 %
-%   - single precision
-%   - IEEE floating point
-%   - uncompressed
-%   - tiled
-%   - tile size = tile_size x tile_size
-%   - initialized entirely to NoData
+% INPUTS
+%   filename     - output BigTIFF filename
+%   nRows        - raster height [pixels]
+%   nCols        - raster width [pixels]
+%   R            - spatial referencing object for the Alpine raster
+%   nodata        - NoData value used for unprocessed pixels
+%   tile_size    - TIFF tile dimensions [pixels]
 %
-% The TIFF tile grid is deliberately identical to the SVF processing
-% chunk grid. Therefore one completed SVF chunk can later be written
-% directly into exactly one TIFF tile.
+% OUTPUT
+%   None. The function creates the BigTIFF at filename.
 %
-% Edge tiles are full TIFF tiles and are padded with NoData outside the
-% actual raster extent.
+% OUTPUT RASTER
+%   The raster is:
+%     - single precision
+%     - IEEE floating point
+%     - uncompressed
+%     - tiled
+%     - tile_size x tile_size pixels per tile
+%     - initialized entirely to NoData
 %
-% This function creates the BigTIFF only. It does not perform any
-% ray-tracing.
+% TILE ORGANIZATION
+%   The TIFF tile grid is deliberately identical to the SVF processing
+%   chunk grid. Consequently, each completed processing chunk maps
+%   directly to one TIFF tile.
+%
+%   Edge tiles remain full TIFF tiles and are padded with NoData outside
+%   the actual Alpine raster extent.
+%
+% WORKFLOW ROLE
+%   This function only creates and initializes the final output raster.
+%   It performs no DEM processing or ray tracing.
 
 %% =========================================================================
 % Validate inputs
@@ -43,12 +59,10 @@ if ~isscalar(tile_size) || ...
    ~isfinite(tile_size) || ...
    tile_size < 16 || ...
    tile_size ~= round(tile_size)
-
     error("tile_size must be an integer >= 16.")
 end
 
 if ~isfinite(nodata)
-
     error("NoData value must be finite.")
 end
 
@@ -138,20 +152,13 @@ setTag(t,tag);
 fprintf("\n")
 fprintf("Writing empty TIFF tiles:\n")
 
-empty_tile = single( ...
-    nodata * ones(tile_size,tile_size));
+empty_tile = single(nodata * ones(tile_size,tile_size));
 
 for itile = 1:nTiles
-
-    writeEncodedTile( ...
-        t, ...
-        itile, ...
-        empty_tile);
-
+    writeEncodedTile(t, itile, empty_tile);
 end
 
-fprintf("%d / %d tiles initialized\n", ...
-    nTiles,nTiles)
+fprintf("%d / %d tiles initialized\n",nTiles,nTiles)
 
 %% =========================================================================
 % Close

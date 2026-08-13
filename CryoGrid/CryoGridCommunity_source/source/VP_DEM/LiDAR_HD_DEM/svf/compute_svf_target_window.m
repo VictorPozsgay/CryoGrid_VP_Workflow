@@ -1,17 +1,49 @@
 function SVF = compute_svf_target_window( ...
     Z,target_mask,SLOPE,ASPECT, ...
     dx,dy,azimuths,max_distance,use_parallel)
-%COMPUTE_SVF_TARGET_WINDOW
-% Compute SVF for all valid target pixels in one calculation window.
+%COMPUTE_SVF_TARGET_WINDOW Compute SVF for valid pixels in a target window.
 %
-% The target pixels are extracted from target_mask.
-% DEM, slope and aspect validity are enforced consistently.
+% PURPOSE
+%   Computes SVF for all valid target pixels within one DEM calculation
+%   window and returns the result on the original window grid.
 %
-% The actual ray tracing is delegated to compute_svf_target_chunk().
+% INPUTS
+%   Z              - DEM calculation window
+%   target_mask    - logical mask identifying target pixels
+%   SLOPE          - slope raster corresponding to Z [degrees]
+%   ASPECT         - aspect raster corresponding to Z [degrees]
+%   dx, dy         - DEM pixel dimensions [m]
+%   azimuths       - azimuth angles [degrees], clockwise from North
+%   max_distance   - maximum ray-tracing distance [m]
+%   use_parallel   - logical flag enabling parallel target-block
+%                    computation
 %
-% The output SVF has the same dimensions as Z.
-% Valid target pixels receive SVF values.
-% All other pixels remain NaN.
+% OUTPUT
+%   SVF            - single-precision SVF raster with the same dimensions
+%                    as Z. Valid target pixels contain SVF values; all
+%                    other pixels are NaN.
+%
+% WORKFLOW
+%   1. Extract target pixels from target_mask.
+%   2. Remove pixels with invalid DEM, slope or aspect values.
+%   3. Convert terrain angles to radians.
+%   4. Divide target pixels into computational blocks.
+%   5. Compute each block using compute_svf_target_chunk().
+%   6. Optionally process blocks in parallel.
+%   7. Reassemble the block results onto the original Z grid.
+%
+% PARALLELIZATION
+%   Parallelization is performed over blocks of target pixels using
+%   MATLAB's process-based parfor.
+%
+%   The function does not start a parallel pool when no valid target
+%   pixels are present. The caller is responsible for deciding whether
+%   parallel execution should be enabled for the current chunk.
+%
+% NOTE
+%   This function operates on one buffered calculation window. The caller
+%   is responsible for extracting the target chunk from the returned
+%   window and writing it to the final SVF raster.
 
 %% =========================================================================
 % Find target pixels
@@ -20,10 +52,8 @@ function SVF = compute_svf_target_window( ...
 [row,col] = find(target_mask);
 
 if isempty(row)
-
     SVF = NaN(size(Z),"single");
     return
-
 end
 
 %% =========================================================================
@@ -65,10 +95,8 @@ aspect_deg = aspect_deg(valid);
 % =========================================================================
 
 if isempty(z0)
-
     SVF = NaN(size(Z),"single");
     return
-
 end
 
 %% =========================================================================
@@ -89,21 +117,13 @@ nTarget = numel(z0);
 % =========================================================================
 
 if use_parallel
-
     pool = gcp("nocreate");
-
     if isempty(pool)
-
         pool = parpool("Processes");
-
     end
-
     nWorkers = pool.NumWorkers;
-
 else
-
     nWorkers = 1;
-
 end
 
 %% =========================================================================
@@ -111,11 +131,8 @@ end
 % =========================================================================
 
 nBlocks = min(4*nWorkers,nTarget);
-
 nBlocks = max(1,nBlocks);
-
-block_edges = round( ...
-    linspace(0,nTarget,nBlocks+1));
+block_edges = round(linspace(0,nTarget,nBlocks+1));
 
 %% =========================================================================
 % Compute blocks
@@ -124,18 +141,12 @@ block_edges = round( ...
 SVF_blocks = cell(nBlocks,1);
 
 if use_parallel && nWorkers > 1
-
     parfor iblock = 1:nBlocks
-
         i1 = block_edges(iblock) + 1;
         i2 = block_edges(iblock + 1);
-
         if i2 < i1
-
             SVF_blocks{iblock} = zeros(0,1,"single");
-
         else
-
             SVF_blocks{iblock} = ...
                 compute_svf_target_chunk( ...
                     Z, ...
@@ -151,24 +162,15 @@ if use_parallel && nWorkers > 1
                     deg2rad(azimuths), ...
                     ceil(max_distance/min(dx,dy)), ...
                     max_distance);
-
         end
-
     end
-
 else
-
     for iblock = 1:nBlocks
-
         i1 = block_edges(iblock) + 1;
         i2 = block_edges(iblock + 1);
-
         if i2 < i1
-
             SVF_blocks{iblock} = zeros(0,1,"single");
-
         else
-
             SVF_blocks{iblock} = ...
                 compute_svf_target_chunk( ...
                     Z, ...
@@ -184,11 +186,8 @@ else
                     deg2rad(azimuths), ...
                     ceil(max_distance/min(dx,dy)), ...
                     max_distance);
-
         end
-
     end
-
 end
 
 %% =========================================================================
@@ -219,7 +218,6 @@ end
 % =========================================================================
 
 SVF = NaN(size(Z),"single");
-
 SVF(target_index) = single(SVF_values);
 
 end

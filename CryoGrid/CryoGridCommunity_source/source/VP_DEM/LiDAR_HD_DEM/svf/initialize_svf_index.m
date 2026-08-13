@@ -1,5 +1,44 @@
 function index = initialize_svf_index( ...
     nRows,nCols,chunk_size,nBins,max_distance)
+%INITIALIZE_SVF_INDEX Initialize the restart index for Alpine SVF chunks.
+%
+% PURPOSE
+%   Creates the persistent processing index used by the Alpine SVF
+%   workflow to track the status of every processing chunk.
+%
+% INPUTS
+%   nRows         - full Alpine raster height [pixels]
+%   nCols         - full Alpine raster width [pixels]
+%   chunk_size    - target processing chunk size [pixels]
+%   nBins         - number of azimuth bins used for SVF calculation
+%   max_distance  - maximum ray-tracing distance [m]
+%
+% OUTPUT
+%   index         - structure containing:
+%                     - raster and processing parameters
+%                     - chunk-grid dimensions
+%                     - status and metadata for every chunk
+%
+% CHUNK STATUS
+%   Each chunk is initially assigned:
+%
+%       status = "NOT DONE"
+%
+%   During processing, completed chunks are changed to:
+%
+%       status = "DONE"
+%
+%   Chunks containing no valid DEM pixels are also marked "DONE", since
+%   their corresponding final TIFF tile remains entirely NoData.
+%
+% RESTART WORKFLOW
+%   The index is saved by save_index() after each successfully completed
+%   chunk. It therefore provides the persistent restart state for
+%   compute_skyview_factor_alps().
+%
+% NOTE
+%   Chunk IDs are assigned in row-major order: all column chunks of one
+%   chunk row are assigned before proceeding to the next chunk row.
 
 nChunkRows = ceil(nRows/chunk_size);
 nChunkCols = ceil(nCols/chunk_size);
@@ -8,16 +47,16 @@ nChunks = nChunkRows*nChunkCols;
 
 index = struct();
 
-index.version = 1;
-index.nRows = nRows;
-index.nCols = nCols;
-index.chunk_size = chunk_size;
-index.nBins = nBins;
+index.version      = 1;
+index.nRows        = nRows;
+index.nCols        = nCols;
+index.chunk_size   = chunk_size;
+index.nBins        = nBins;
 index.max_distance = max_distance;
 
 index.nChunkRows = nChunkRows;
 index.nChunkCols = nChunkCols;
-index.nChunks = nChunks;
+index.nChunks    = nChunks;
 
 index.chunk = repmat( ...
     struct( ...
