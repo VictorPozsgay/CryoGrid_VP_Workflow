@@ -332,6 +332,110 @@ Physical geographic convention:
 
 ---
 
+# Sky-View Factor (SVF)
+
+The workflow computes a terrain-based **sky-view factor (SVF)** from the 10 m Alpine DEM using horizon ray tracing. SVF represents the fraction of the hemispherical sky visible from each DEM pixel, accounting for surrounding topography and the local surface slope/aspect. It is used to represent topographic effects on radiative forcing in the CryoGrid workflow.
+
+## Method
+
+For each target DEM pixel:
+
+1. The local elevation, slope and aspect are obtained from the DEM and pre-computed derivative products.
+2. Terrain is ray-traced in a set of azimuth directions.
+3. For each ray, the maximum terrain elevation angle (horizon angle) is determined up to a specified maximum distance.
+4. The horizon angle is combined with the local slope and aspect to calculate the sky-opening contribution for that azimuth.
+5. Contributions are integrated over the full 360° to obtain the SVF.
+6. The resulting SVF is written to GeoTIFF.
+
+Ray coordinates are converted to raster indices using continuous-coordinate rounding. Consecutive ray samples that fall in the same raster cell are removed as an optimization, while retaining the first occurrence and therefore the nearest distance to that cell.
+
+Ray tracing is parallelized over independent blocks of target pixels using MATLAB's process-based parallel pool.
+
+## Default parameters
+
+The parameters are configurable. The current default configuration is:
+
+    DEM resolution       : 10 m
+    Maximum horizon      : 1000 m
+    Azimuth bins         : 36
+    Azimuth spacing      : 10°
+
+These values provide a practical compromise between terrain representation and computational cost.
+
+- Increasing the number of azimuth bins improves representation of narrow or strongly directional terrain features but increases computation.
+- Increasing the maximum horizon distance allows more distant terrain to contribute but increases computation.
+- The parameters can therefore be modified for sensitivity testing or different applications.
+
+## NoData and DEM boundaries
+
+NoData terrain is **not filled or interpolated**. Rays may continue through NoData and can subsequently encounter valid terrain. This avoids inventing elevations but means that SVF close to the outer DEM boundary, or around internal NoData gaps, is potentially less reliable.
+
+The current assumption is that the Alpine DEM boundary is often located near major mountain ridges, so missing terrain beyond the boundary will frequently have a limited effect on the visible sky. This remains an approximation.
+
+## Limitations and hypotheses
+
+The resulting SVF is a terrain-derived approximation rather than an exact hemispherical visibility calculation. The main limitations are:
+
+- **Finite horizon distance:** terrain beyond the selected maximum distance is ignored.
+- **Finite azimuthal resolution:** terrain features between sampled azimuths may be missed.
+- **DEM resolution:** sub-grid terrain features are not represented.
+- **DEM boundaries and NoData:** missing terrain can affect horizons, particularly close to data boundaries.
+- **Terrain only:** vegetation, buildings and other non-topographic obstructions are not included.
+- **Static topography:** changes in terrain, snow, glaciers or vegetation are not represented.
+- **Discrete raster ray tracing:** visibility is evaluated against DEM cells rather than a continuous terrain surface.
+
+For the full-Alps calculation, the Alpine DEM is processed in spatial chunks with a surrounding horizon buffer. This avoids calculating SVF independently for each SAFRAN massif and allows a continuous full-Alps SVF product to be generated before extracting the results for individual massifs.
+
+## Validation
+
+The ray-tracing implementation was validated on a 301 × 301 pixel test window. For the 1 km configuration, the resulting SVF statistics were:
+
+    Minimum SVF  : 0.16047
+    Maximum SVF  : 0.99964
+    Mean SVF     : 0.78407
+    Median SVF   : 0.81738
+
+The exact values depend on the selected test window and terrain, and are primarily used to verify reproducibility and detect unintended changes to the implementation.
+
+## SVF horizon-distance sensitivity
+
+A sensitivity test was performed on a 301 × 301 pixel test window, comparing ray-traced SVF calculations with maximum horizon distances of 1, 2, 3, 4, 5, 7.5 and 10 km.
+
+The 1 km and 5 km results differed by:
+
+    Mean difference    : 0.004613
+    Median difference  : 0.001499
+    Mean |difference|  : 0.004613
+    Max |difference|   : 0.056746
+    95th percentile    : 0.019230
+    99th percentile    : 0.028998
+    |difference| > .01 : 16.16 %
+    |difference| > .02 : 4.58 %
+    |difference| > .05 : 0.01 %
+
+Increasing the horizon distance progressively reduced the mean SVF, but the effect became increasingly small at longer distances. For comparison, the mean SVF in the test window was approximately 0.7841 at 1 km, 0.7795 at 5 km, and 0.7786 at 10 km.
+
+The difference between 1 and 5 km was considered small enough for the intended CryoGrid application. SVF will subsequently be used as one variable among elevation, slope, aspect, geology and other terrain characteristics in a clustering procedure, so a localized SVF difference of a few hundredths is not expected to have a major impact.
+
+By contrast, replacing the original CryoGrid approximation
+
+    SVF = cos²(slope / 2)
+
+with 1 km ray-traced SVF produced a substantially larger difference:
+
+    Mean difference    : -0.155782
+    Median difference  : -0.132831
+    Mean |difference|  : 0.155782
+    Max |difference|   : 0.591185
+    95th percentile    : 0.368943
+    99th percentile    : 0.443810
+
+Thus, accounting explicitly for surrounding terrain has a much larger effect than extending the horizon distance from 1 km to several kilometres.
+
+A maximum horizon distance of **1 km is therefore used as the default**, providing a good balance between physical realism and computational cost. The parameter remains configurable for sensitivity testing.
+
+---
+
 # CryoGrid aspect conversion
 
 CryoGrid uses:
