@@ -83,7 +83,6 @@ classdef interpolate_elevation_massif_SAFRAN < process_BASE
             forcing.DATA.p           = double(safran.data.p(:,ind_alt) * weights_alt(:));
             forcing.DATA.rainfall    = double(safran.data.rainfall(:,ind_alt) * weights_alt(:));
             forcing.DATA.snowfall    = double(safran.data.snowfall(:,ind_alt) * weights_alt(:));
-            forcing.DATA.albedo_foot = double(safran.data.albedo_foot(:,ind_alt) * weights_alt(:));
             forcing.DATA.S_TOA       = double(safran.data.S_TOA);
             forcing.DATA.timeForcing = double(safran.data.t_span);
 
