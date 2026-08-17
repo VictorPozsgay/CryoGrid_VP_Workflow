@@ -20,7 +20,7 @@ CryoGrid_VP_Workflow/
 │
 │   ├── CryoGridCommunity_source/
 │   │   └── source/
-│   │       ├── VP_Forcing/
+│   │       ├── VP_Meteo/
 │   │       ├── VP_DEM/
 │   │       └── VP_Geol/
 │   │
@@ -40,7 +40,7 @@ The three preparation workflows are located in:
 ```text
 CryoGrid/CryoGridCommunity_source/source/
 
-├── VP_Forcing/
+├── VP_Meteo/
 │   └── Meteorological forcing preparation
 │
 ├── VP_DEM/
@@ -84,15 +84,15 @@ prepare_geology(geology_path,dem_path,varargin)
 
 ---
 
-# VP_Forcing: meteorological forcing workflow
+# VP_Meteo: meteorological forcing workflow
 
 Documentation:
 
-[SAFRAN S2M workflow](CryoGrid/CryoGridCommunity_source/source/VP_Forcing/README.md)
+[SAFRAN S2M workflow](CryoGrid/CryoGridCommunity_source/source/VP_Meteo/README.md)
 
 Main workflow:
 
-[`prepare_forcing.m`](CryoGrid/CryoGridCommunity_source/source/VP_Forcing/prepare_forcing.m)
+[`prepare_forcing.m`](CryoGrid/CryoGridCommunity_source/source/VP_Meteo/prepare_forcing.m)
 
 The workflow combines:
 
@@ -529,9 +529,9 @@ Then run the required preparation workflow.
 
 ### Meteorological forcing
 
-[`prepare_forcing.m`](CryoGrid/CryoGridCommunity_source/source/VP_Forcing/prepare_forcing.m)
+[`prepare_forcing.m`](CryoGrid/CryoGridCommunity_source/source/VP_Meteo/prepare_forcing.m)
 
-[SAFRAN S2M workflow](CryoGrid/CryoGridCommunity_source/source/VP_Forcing/README.md)
+[SAFRAN S2M workflow](CryoGrid/CryoGridCommunity_source/source/VP_Meteo/README.md)
 
 ### DEM and topography
 

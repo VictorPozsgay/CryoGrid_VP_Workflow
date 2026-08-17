@@ -1,8 +1,8 @@
-# VP_Forcing
+# VP_Meteo
 
 ## Overview
 
-**VP_Forcing** is a MATLAB workflow to build CryoGrid-compatible meteorological forcing datasets from:
+**VP_Meteo** is a MATLAB workflow to build CryoGrid-compatible meteorological forcing datasets from:
 
 - SAFRAN/S2M meteorological forcing
 - ERA5 top-of-atmosphere (TOA) solar radiation
