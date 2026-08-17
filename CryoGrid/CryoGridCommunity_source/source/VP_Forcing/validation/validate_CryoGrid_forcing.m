@@ -1,4 +1,4 @@
-function validate_CryoGrid_forcing(forcing_path,diagnostic_path)
+function validate_CryoGrid_forcing(meteo_path,diagnostic_path)
 %VALIDATE_CRYOGRID_FORCING Comprehensive CryoGrid forcing quality control.
 %
 % VALIDATE_CRYOGRID_FORCING(FORCING_FILE)
@@ -15,7 +15,7 @@ function validate_CryoGrid_forcing(forcing_path,diagnostic_path)
 %   - warning summary
 %
 % INPUT
-%   forcing_path
+%   meteo_path
 %       Path to the CryoGrid-ready forcing directory containing:
 %
 %           FORCING_SAFRAN_ALL.mat
@@ -50,7 +50,7 @@ fprintf('============================================================\n')
 fprintf(' CryoGrid forcing validation\n')
 fprintf('============================================================\n\n')
 
-forcing_file = fullfile(forcing_path,"FORCING_SAFRAN_ALL.mat");
+forcing_file = fullfile(meteo_path,"FORCING_SAFRAN_ALL.mat");
 if ~isfile(forcing_file)
     error("File not found:\n%s",forcing_file)
 end

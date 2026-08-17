@@ -3,18 +3,18 @@ addpath(genpath(source_path));
 
 %% Paths
 
-massif_num = 3;
+massif_num = 5;
 
 dem_massifs_folder = "D:\Utilisateurs\pozsgayv\Documents\CryoGrid_VP_Workflow\CryoGrid\CryoGridCommunity_forcing\DEM\LiDAR_HD_DEM_10m\DEM";
 
 
 dem_file           = fullfile(dem_massifs_folder,sprintf('DEM_massif_%02d.tif',massif_num));
-shapefile_file_box = fullfile("D:\Utilisateurs\pozsgayv\Documents\CryoGrid_VP_Workflow\forcing\Forcing_Data\DEM_10m\massifs",sprintf("test_area_massif_%02d.shp",massif_num));
+shapefile_file_box = "D:\Utilisateurs\pozsgayv\Documents\CryoGrid_VP_Workflow\CryoGrid\CryoGridCommunity_forcing\meteo\SAFRAN\shapefile\test_areas_all_massifs.shp";
 
 result_path   = "D:\Utilisateurs\pozsgayv\Documents\CryoGrid_VP_Workflow\CryoGrid\CryoGridCommunity_results\templates";
-run_name      = "test_spatial";
-run_folder    = fullfile(result_path,run_name);
-output_folder = fullfile(result_path,"plots");
+run_name      = fullfile("test_spatial");
+run_folder    = fullfile(result_path,run_name,sprintf('massif_%02d',massif_num));
+output_folder = fullfile(result_path,run_name,"plots");
 
 %% Load CryoGrid results
 
@@ -29,21 +29,19 @@ end
 
 %% Load DEM
 
-Sbox = shaperead(shapefile_file_box);
-
 [Z,R] = readgeoraster(dem_file);
-
-step = max(1,ceil(max(size(Z))/1500));
-
-Zp = double(Z(1:step:end,1:step:end));
+step  = max(1,ceil(max(size(Z))/1500));
+Zp    = double(Z(1:step:end,1:step:end));
 
 [X,Y] = worldGrid(R);
-
 X = X(1:step:end,1:step:end);
 Y = Y(1:step:end,1:step:end);
 
 %% Crop DEM to test box
 
+Sbox = shaperead(shapefile_file_box);
+idx  = find([Sbox.massif_num] == massif_num);
+Sbox = Sbox(idx);
 xmin = min(Sbox.X);
 xmax = max(Sbox.X);
 ymin = min(Sbox.Y);

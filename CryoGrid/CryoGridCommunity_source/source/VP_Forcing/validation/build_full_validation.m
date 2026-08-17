@@ -1,4 +1,4 @@
-function build_full_validation(forcing_path,diagnostic_path)
+function build_full_validation(meteo_path,diagnostic_path)
 %BUILD_FULL_VALIDATION Run complete CryoGrid forcing validation workflow.
 %
 % DESCRIPTION
@@ -22,7 +22,7 @@ function build_full_validation(forcing_path,diagnostic_path)
 %        - computes seasonal climatologies
 %
 % INPUT
-%   forcing_path
+%   meteo_path
 %       Path to the CryoGrid-ready forcing directory containing:
 %
 %           CryoGrid_ready/
@@ -72,5 +72,5 @@ function build_full_validation(forcing_path,diagnostic_path)
 %   VALIDATE_CRYOGRID_FORCING,
 %   PLOT_FORCING_DIAGNOSTICS
 
-validate_CryoGrid_forcing(forcing_path,diagnostic_path)
-plot_forcing_diagnostics(forcing_path,diagnostic_path)
+validate_CryoGrid_forcing(meteo_path,diagnostic_path)
+plot_forcing_diagnostics(meteo_path,diagnostic_path)

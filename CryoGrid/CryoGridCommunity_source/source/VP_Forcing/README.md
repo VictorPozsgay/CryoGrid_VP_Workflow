@@ -249,13 +249,13 @@ The complete workflow is executed using:
 [`prepare_forcing.m`](./prepare_forcing.m)
 
 ```matlab
-prepare_forcing(forcing_path)
+prepare_forcing(meteo_path)
 ```
 
 or
 
 ```matlab
-prepare_forcing(forcing_path,'Email','<user email address>')
+prepare_forcing(meteo_path,'Email','<user email address>')
 ```
 
 if the user wishes to download the SAFRAN / S2M data at the beginning of the workflow.
@@ -263,18 +263,18 @@ if the user wishes to download the SAFRAN / S2M data at the beginning of the wor
 ERA5 TOA radiation can additionally be downloaded automatically using:
 
 ```matlab
-prepare_forcing(forcing_path,'DownloadERA5',true)
+prepare_forcing(meteo_path,'DownloadERA5',true)
 ```
 
 or combined with SAFRAN downloading:
 
 ```matlab
-prepare_forcing(forcing_path,...
+prepare_forcing(meteo_path,...
     'Email','<user email address>',...
     'DownloadERA5',true)
 ```
 
-where `forcing_path` corresponds to the meteorological data root directory:
+where `meteo_path` corresponds to the meteorological data root directory:
 
 [`CryoGridCommunity_forcing/meteo/`](../../../CryoGridCommunity_forcing/meteo/)
 
@@ -305,7 +305,7 @@ pip install cdsapi netCDF4
 The configuration is mainly required for the optional ERA5 acquisition step:
 
 ```matlab
-prepare_forcing(forcing_path,'DownloadERA5',true)
+prepare_forcing(meteo_path,'DownloadERA5',true)
 ```
 
 If ERA5 data have already been downloaded, the workflow can be run without configuring Python.
@@ -369,7 +369,7 @@ Output:
 This step is optional and is activated with:
 
 ```matlab
-prepare_forcing(forcing_path,'DownloadERA5',true)
+prepare_forcing(meteo_path,'DownloadERA5',true)
 ```
 
 If `DownloadERA5` is `false` (default), the workflow assumes that the ERA5 NetCDF files already exist.
@@ -457,7 +457,7 @@ The acquisition procedure depends on the available data access method and datase
 * Use the [`download_S2M_data.m`](./acquisition/download_S2M_data.m) included as Step 0 of the [Workflow](#workflow) section.
     1. Simply add an optional argument to [`download_S2M_data.m`](./acquisition/download_S2M_data.m) in the form of 
     ```matlab
-    prepare_forcing(forcing_path,'Email','<user email address>')
+    prepare_forcing(meteo_path,'Email','<user email address>')
     ```
     where the last field should be the user's personal email address.
     2. When the code stops and prompts you `Paste just the 'File name' from the email (e.g. 5ecf33e8-...-c34c.zip):`, open your email, copy the 'File name' field, and paste it into the MatlabCommand Window
@@ -504,7 +504,7 @@ The Python script relies on the CDS API and requires a valid Python installation
 Before using:
 
 ```matlab
-prepare_forcing(forcing_path,'DownloadERA5',true)
+prepare_forcing(meteo_path,'DownloadERA5',true)
 ```
 
 the user must:
@@ -670,9 +670,9 @@ Including:
 Example:
 
 ```matlab
-forcing_path = "path/to/meteo";
+meteo_path = "path/to/meteo";
 
-prepare_forcing(forcing_path)
+prepare_forcing(meteo_path)
 ```
 
 The final output is:

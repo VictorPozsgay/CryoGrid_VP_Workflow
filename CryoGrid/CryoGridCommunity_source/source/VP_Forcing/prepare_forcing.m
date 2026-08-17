@@ -1,4 +1,4 @@
-function prepare_forcing(forcing_path,varargin)
+function prepare_forcing(meteo_path,varargin)
 %PREPARE_FORCING Build CryoGrid-ready forcing datasets from SAFRAN and ERA5.
 %
 % DESCRIPTION
@@ -25,7 +25,7 @@ function prepare_forcing(forcing_path,varargin)
 %        convenient loading by CryoGrid workflows.
 %
 % INPUT
-%   forcing_path
+%   meteo_path
 %       Path to the forcing dataset root directory:
 %
 %           meteo/
@@ -45,9 +45,9 @@ function prepare_forcing(forcing_path,varargin)
 %       S2M / SAFRAN forcing files and associated shapefiles already exist.
 %       default = 'none'
 %       Example: 
-%           prepare_forcing(forcing_path,'Email','<name>@<extension>')
+%           prepare_forcing(meteo_path,'Email','<name>@<extension>')
 %           or
-%           prepare_forcing(forcing_path) for default (no download)
+%           prepare_forcing(meteo_path) for default (no download)
 % 
 %   'DownloadERA5'
 %       Logical flag indicating whether ERA5 top-of-atmosphere (TOA)
@@ -62,7 +62,7 @@ function prepare_forcing(forcing_path,varargin)
 %       default = false
 %
 %       Example:
-%           prepare_forcing(forcing_path,'DownloadERA5',true)
+%           prepare_forcing(meteo_path,'DownloadERA5',true)
 % 
 % OUTPUT
 %   Creates:
@@ -99,10 +99,10 @@ download_era5 = p.Results.DownloadERA5;
 
 addpath(genpath(fileparts(mfilename('fullpath'))));
 
-safran_path     = fullfile(forcing_path,"SAFRAN");
-era5_path       = fullfile(forcing_path,"ERA5");
-output_path     = fullfile(forcing_path,"CryoGrid_ready");
-diagnostic_path = fullfile(forcing_path,"forcing_diagnostics");
+safran_path     = fullfile(meteo_path,"SAFRAN");
+era5_path       = fullfile(meteo_path,"ERA5");
+output_path     = fullfile(meteo_path,"CryoGrid_ready");
+diagnostic_path = fullfile(meteo_path,"forcing_diagnostics");
 
 folders_to_create = {
     fullfile(safran_path,"per_massif")
@@ -123,7 +123,7 @@ print_step(0,"Download SAFRAN (S2M) forcing")
 if strcmp(email_address,'none')
     disp('Skipping. Assuming the data already exists.')
 else
-    download_S2M_data(forcing_path,email_address)
+    download_S2M_data(meteo_path,email_address)
 end
 
 %% Step 0.5

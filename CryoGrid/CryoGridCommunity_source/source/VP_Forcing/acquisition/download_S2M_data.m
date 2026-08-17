@@ -1,4 +1,4 @@
-function download_S2M_data(forcing_path,email_address)
+function download_S2M_data(meteo_path,email_address)
 %DOWNLOAD_S2M_DATA Download raw SAFRAN S2M forcing and massif shapefiles from AERIS.
 %
 % DESCRIPTION
@@ -24,7 +24,7 @@ function download_S2M_data(forcing_path,email_address)
 %        the station shapefiles and intermediate archives.
 %
 % INPUT
-%   forcing_path
+%   meteo_path
 %       Path to the forcing dataset root directory:
 %
 %           meteo/
@@ -58,7 +58,7 @@ downloadBaseUrl = "https://api.sedoo.fr/aeris-s2m-rest/data/download/";
 orderApiUrl     = downloadBaseUrl+"865730e8-edeb-4c6b-ae58-80f95166509b";
 shapefileUrl    = downloadBaseUrl+"files/shapefiles";
 
-safran_path = fullfile(forcing_path,"SAFRAN_test");
+safran_path = fullfile(meteo_path,"SAFRAN_test");
 raw_path    = fullfile(safran_path,"raw");
 shape_path  = fullfile(safran_path,"shapefile");
 

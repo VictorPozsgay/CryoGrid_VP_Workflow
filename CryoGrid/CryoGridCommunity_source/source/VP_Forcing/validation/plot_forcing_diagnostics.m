@@ -1,4 +1,4 @@
-function plot_forcing_diagnostics(forcing_path,diagnostic_path)
+function plot_forcing_diagnostics(meteo_path,diagnostic_path)
 %PLOT_FORCING_DIAGNOSTICS Comprehensive CryoGrid forcing diagnostics.
 %
 % Automatically analyses all massifs contained in a CryoGrid forcing file.
@@ -11,7 +11,7 @@ function plot_forcing_diagnostics(forcing_path,diagnostic_path)
 %   5) Seasonal climatology
 %
 % INPUT
-%   forcing_path
+%   meteo_path
 %       Path to the CryoGrid-ready forcing directory containing:
 %
 %           FORCING_SAFRAN_ALL.mat
@@ -43,7 +43,7 @@ fprintf("============================================================\n")
 fprintf(" CryoGrid forcing diagnostics\n")
 fprintf("============================================================\n\n")
 
-forcing_file = fullfile(forcing_path,"FORCING_SAFRAN_ALL.mat");
+forcing_file = fullfile(meteo_path,"FORCING_SAFRAN_ALL.mat");
 fprintf("Loading:\n%s\n\n",forcing_file)
 
 if ~isfile(forcing_file)
