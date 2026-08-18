@@ -134,10 +134,58 @@ end
 %% Discover massif DEMs
 
 dem_files = dir(fullfile(dem_folder,"DEM_massif_*.tif"));
+
 if isempty(dem_files)
     error("No massif DEMs found in: %s",dem_folder)
 end
+
 fprintf("Found %d massif DEMs\n",numel(dem_files))
+
+
+%% Check whether final masks already exist
+
+masking_log = fullfile(mask_folder,"masking_log.csv");
+
+all_masks_exist = true;
+
+for i = 1:numel(dem_files)
+
+    name = dem_files(i).name;
+
+    token = regexp( ...
+        name,...
+        'DEM_massif_(\d+)\.tif',...
+        'tokens',...
+        'once');
+
+    if isempty(token)
+        error("Could not determine massif number from: %s",name)
+    end
+
+    id = token{1};
+
+    mask_file = fullfile( ...
+        mask_folder,...
+        sprintf("MASK_massif_%s.tif",id));
+
+    if ~isfile(mask_file)
+        all_masks_exist = false;
+        break
+    end
+
+end
+
+
+if all_masks_exist && isfile(masking_log)
+
+    fprintf("\nAll final masks already exist.\n")
+    fprintf("Masking log already exists:\n")
+    fprintf("%s\n",masking_log)
+    fprintf("Skipping final mask generation.\n")
+
+    return
+
+end
 
 %% Preallocate summary
 

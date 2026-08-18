@@ -139,6 +139,12 @@ LiDAR_HD_DEM_10m/
 
 The workflow is fully restartable. Each processing step checks whether its output already exists and skips completed processing where possible.
 
+### Complete VP workflow
+
+`VP_Geol` can also be executed as part of the complete CryoGrid VP preparation workflow using [`prepare_VP.m`](../../../CryoGridCommunity_run/prepare_VP.m).
+
+The higher-level workflow automatically provides the required paths and runs the VP preparation modules in the appropriate order.
+
 ---
 
 ## Processing steps

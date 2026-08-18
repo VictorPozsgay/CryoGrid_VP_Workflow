@@ -93,9 +93,9 @@ function PATHS = VP_return_paths(repo_root)
         PATHS.CG_ROOT_PATH,"CryoGridCommunity_run"));
 
     % Convenience paths.
-    PATHS.meteo_path   = PATHS.SOURCE.meteo;
-    PATHS.dem_path     = PATHS.SOURCE.dem;
-    PATHS.geology_path = PATHS.SOURCE.geology;
+    PATHS.meteo_path   = PATHS.FORCING.meteo;
+    PATHS.dem_path     = PATHS.FORCING.dem;
+    PATHS.geology_path = PATHS.FORCING.geology;
 
     % SAFRAN massif shapefile.
     PATHS.safran_shp = char(fullfile( ...

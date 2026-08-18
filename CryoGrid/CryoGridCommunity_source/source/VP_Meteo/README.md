@@ -26,18 +26,21 @@ The complete processing chain is:
 ```mermaid
 flowchart TD
 
-    A[Raw SAFRAN forcing \nOnline\nor\n0. Data acquisition script] --> B[1. SAFRAN reading and organization]
+    A[SAFRAN / S2M forcing] --> B[1. Read SAFRAN forcing]
     B --> C[SAFRAN forcing per massif/elevation]
 
-    D[Raw ERA5 TOA radiation \nOnline\nor\n0. Data acquisition script] --> E[2. ERA5 TOA reading]
-    E --> F[3. ERA5 interpolation to SAFRAN massifs]
+    D[ERA5 TOA radiation] --> E[2. Read ERA5 TOA]
+    E --> F[3. Interpolate ERA5 TOA<br/>to SAFRAN massifs]
 
-    C --> G[4. SAFRAN + ERA5 merging]
-    F --> G
+    G1[Optional: Download S2M<br/>DownloadS2M = true] -.-> A
+    G2[Optional: Download ERA5<br/>DownloadERA5 = true] -.-> D
 
-    G --> H[5. CryoGrid forcing collection]
-    H --> I[6. Validation and diagnostics]
-    I --> J[CryoGrid-ready forcing dataset]
+    C --> H[4. Merge SAFRAN + ERA5 forcing]
+    F --> H
+
+    H --> I[5. Build CryoGrid forcing collection]
+    I --> J[6. Validation and diagnostics]
+    J --> K[CryoGrid-ready forcing dataset]
 ```
 
 ---
@@ -241,10 +244,7 @@ The forcing variables follow CryoGrid conventions:
 
 # Workflow
 
-> [!IMPORTANT]  
-> The download of the ERA5 top of atmosphere incident solar radiation is handled from the MATLAB workflow but internally relies on Python and the CDS API. The Python environment therefore needs to be configured before using the automatic ERA5 download option. See Section [Data acquisition](#data-acquisition) below.
-
-The complete workflow is executed using:
+The complete VP_Meteo workflow is executed using:
 
 [`prepare_forcing.m`](./prepare_forcing.m)
 
@@ -252,98 +252,160 @@ The complete workflow is executed using:
 prepare_forcing(meteo_path)
 ```
 
-or
-
-```matlab
-prepare_forcing(meteo_path,'Email','<user email address>')
-```
-
-if the user wishes to download the SAFRAN / S2M data at the beginning of the workflow.
-
-ERA5 TOA radiation can additionally be downloaded automatically using:
-
-```matlab
-prepare_forcing(meteo_path,'DownloadERA5',true)
-```
-
-or combined with SAFRAN downloading:
-
-```matlab
-prepare_forcing(meteo_path,...
-    'Email','<user email address>',...
-    'DownloadERA5',true)
-```
-
-where `meteo_path` corresponds to the meteorological data root directory:
+where `meteo_path` is the root directory containing the meteorological forcing datasets:
 
 [`CryoGridCommunity_forcing/meteo/`](../../../CryoGridCommunity_forcing/meteo/)
 
-## Configuration
+By default, the workflow assumes that the required SAFRAN/S2M and ERA5 input datasets already exist.
 
-Some parts of the workflow require machine-specific configuration.
-
-The workflow uses a local configuration file:
-
-[`VP_config.m`](./VP_config.m)
-
-This file is intentionally not tracked by git because it contains machine-dependent information (such as the local Python executable path).
-
-A template is provided:
-
-[`VP_config_template.m`](./VP_config_template.m)
-
-To configure the workflow:
-
-1. Copy `VP_config_template.m` to `VP_config.m`.
-2. Edit the paths according to the local installation.
-3. Ensure that the configured Python environment contains the required packages:
-
-```bash
-pip install cdsapi netCDF4
-```
-
-The configuration is mainly required for the optional ERA5 acquisition step:
+Optional acquisition can be enabled independently for the two datasets:
 
 ```matlab
-prepare_forcing(meteo_path,'DownloadERA5',true)
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadS2M',true, ...
+    'Email','<user email address>', ...
+    'DownloadERA5',true, ...
+    'PythonExecutable','C:\path\to\python.exe')
 ```
 
-If ERA5 data have already been downloaded, the workflow can be run without configuring Python.
+The complete processing chain is:
 
-The workflow performs:
+1. Optionally acquire SAFRAN/S2M forcing.
+2. Optionally acquire ERA5 top-of-atmosphere radiation.
+3. Read and organize SAFRAN forcing by massif.
+4. Read and concatenate ERA5 TOA radiation.
+5. Interpolate ERA5 TOA radiation to SAFRAN massif locations.
+6. Merge SAFRAN and ERA5 forcing.
+7. Build the combined CryoGrid forcing collection.
+8. Validate the resulting forcing dataset.
+
+The `VP_Meteo` module can be run independently. Within the complete CryoGrid VP workflow, [`prepare_VP.m`](../../../CryoGridCommunity_run/prepare_VP.m) can call `prepare_forcing` automatically.
+
+## Configuration
+
+`prepare_forcing` is designed to be self-contained. All information required by the workflow is supplied through its function arguments.
+
+The main input is:
+
+```matlab
+prepare_forcing(meteo_path)
+```
+
+where `meteo_path` defines the root of the meteorological forcing directory.
+
+Optional data acquisition is controlled using the following parameters:
+
+| Option | Default | Purpose |
+|--------|---------|---------|
+| `DownloadS2M` | `false` | Automatically acquire SAFRAN/S2M forcing |
+| `Email` | `'none'` | Email address used for S2M acquisition |
+| `DownloadERA5` | `false` | Automatically acquire ERA5 TOA radiation |
+| `PythonExecutable` | `''` | Python executable used for ERA5 acquisition |
+
+The two acquisition workflows are independent.
+
+If `DownloadS2M` is `false`, existing SAFRAN/S2M files are assumed to be available.
+
+If `DownloadERA5` is `false`, existing ERA5 NetCDF files are assumed to be available.
+
+The `PythonExecutable` option is only required when `DownloadERA5` is enabled.
+
+For example:
+
+```matlab
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadS2M',true, ...
+    'Email','<user email address>')
+```
+
+or:
+
+```matlab
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadERA5',true, ...
+    'PythonExecutable','C:\path\to\python.exe')
+```
+
+Both acquisition steps can be enabled simultaneously:
+
+```matlab
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadS2M',true, ...
+    'Email','<user email address>', ...
+    'DownloadERA5',true, ...
+    'PythonExecutable','C:\path\to\python.exe')
+```
+
+When `prepare_forcing` is called from the complete VP workflow, these arguments can be supplied automatically by the higher-level workflow.
 
 
 ## Step 0 — SAFRAN / S2M downloading
 
-Downloads all the input forcing files (SAFRAN / S2M data and shapefiles).
+Downloads the input SAFRAN/S2M meteorological forcing files and associated shapefiles.
 
 Main function:
 
 [`download_S2M_data.m`](./acquisition/download_S2M_data.m)
 
-This step is optional. If no email address is provided, the workflow assumes that the required SAFRAN files already exist.
+This step is controlled by the `DownloadS2M` option.
+
+By default:
+
+```matlab
+prepare_forcing(meteo_path)
+```
+
+does not download S2M data and assumes that the required files already exist.
+
+To enable automatic acquisition:
+
+```matlab
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadS2M',true, ...
+    'Email','<user email address>')
+```
+
+The `Email` option is only used when `DownloadS2M` is enabled.
 
 Output:
 
 [`CryoGridCommunity_forcing/meteo/SAFRAN/raw/`](../../../CryoGridCommunity_forcing/meteo/SAFRAN/raw/)
 
-and
+and:
 
 [`CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/`](../../../CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/)
 
+If the data have already been downloaded manually, simply leave `DownloadS2M` at its default value:
+
+```matlab
+prepare_forcing(meteo_path)
+```
 
 ## Step 0.5 — ERA5 TOA radiation downloading
 
-Downloads ERA5 top-of-atmosphere incident solar radiation using the Copernicus Climate Data Store (CDS) API.
+Downloads ERA5 top-of-atmosphere (TOA) incident solar radiation using the Copernicus Climate Data Store (CDS) API.
 
 Main MATLAB wrapper:
 
 [`download_ERA5_TOA.m`](./acquisition/download_ERA5_TOA.m)
 
-The MATLAB wrapper:
+The wrapper receives the Python executable explicitly:
 
-- loads the Python environment defined in [`VP_config.m`](./VP_config.m),
-- calls the Python CDS API acquisition script,
+```matlab
+download_ERA5_TOA(python_executable)
+```
+
+It:
+
+- configures MATLAB to use the supplied Python executable,
+- locates the Python acquisition script,
+- automatically determines the CryoGrid repository root,
+- passes the repository root to Python,
 - checks existing yearly files,
 - downloads only missing or invalid years.
 
@@ -353,7 +415,7 @@ The Python acquisition script is:
 
 The Python script provides:
 
-- yearly downloads for the full ERA5 period,
+- yearly downloads,
 - automatic restart capability,
 - NetCDF validation,
 - automatic file naming:
@@ -362,17 +424,22 @@ The Python script provides:
 era5_toa_YYYY.nc
 ```
 
-Output:
+This step is controlled by the `DownloadERA5` option.
 
-[`CryoGridCommunity_forcing/meteo/ERA5_test/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5_test/raw/)
-
-This step is optional and is activated with:
+To enable automatic acquisition:
 
 ```matlab
-prepare_forcing(meteo_path,'DownloadERA5',true)
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadERA5',true, ...
+    'PythonExecutable','C:\path\to\python.exe')
 ```
 
-If `DownloadERA5` is `false` (default), the workflow assumes that the ERA5 NetCDF files already exist.
+If `DownloadERA5` is `false` (default), the workflow assumes that the required ERA5 NetCDF files already exist.
+
+Output:
+
+[`CryoGridCommunity_forcing/meteo/ERA5/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/)
 
 ## Step 1 — SAFRAN processing
 
@@ -487,59 +554,59 @@ The acquisition procedure depends on the available data access method and datase
 
 ## ERA5 TOA radiation acquisition
 
-ERA5 data are obtained from the Copernicus Climate Data Store (CDS).
+ERA5 top-of-atmosphere incident solar radiation is obtained from the
+Copernicus Climate Data Store (CDS).
 
-The ERA5 acquisition is integrated into the MATLAB workflow through:
+The acquisition is integrated into the MATLAB workflow through:
 
 [`download_ERA5_TOA.m`](./acquisition/download_ERA5_TOA.m)
 
-which calls the Python script:
+which calls:
 
 [`download_ERA5_TOA_data.py`](./acquisition/download_ERA5_TOA_data.py)
 
-The Python script relies on the CDS API and requires a valid Python installation and CDS API configuration.
-
 ### Python environment setup
 
-Before using:
+Automatic ERA5 acquisition requires a working Python environment with:
 
-```matlab
-prepare_forcing(meteo_path,'DownloadERA5',true)
+```text
+cdsapi
+netCDF4
 ```
 
-the user must:
-
-1. Have a working Python installation.
-
-2. Install the required Python packages:
+Install the required packages with:
 
 ```bash
 pip install cdsapi netCDF4
 ```
 
-3. Configure the CDS API following:
+The CDS API must also be configured with a valid API configuration.
 
-https://cds.climate.copernicus.eu/how-to-api
+Instructions are available from the [Copernicus Climate Data Store API documentation](https://cds.climate.copernicus.eu/how-to-api).
 
-For Windows users, additional instructions are available at:
+For Windows users, additional instructions are available from the [ECMWF CDS API Windows documentation](https://confluence.ecmwf.int/spaces/CKB/pages/121847376/How+to+install+and+use+CDS+API+on+Windows).
 
-https://confluence.ecmwf.int/spaces/CKB/pages/121847376/How+to+install+and+use+CDS+API+on+Windows
+The Python executable is supplied directly to
+`download_ERA5_TOA` through the `PythonExecutable` option of
+`prepare_forcing`.
 
-4. Configure the Python executable used by MATLAB in:
+For example:
 
-[`VP_config.m`](./VP_config.m)
-
-The configuration file contains the path to the Python environment used for ERA5 acquisition.
-
+```matlab
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadERA5',true, ...
+    'PythonExecutable','C:\path\to\python.exe')
+```
 
 ### ERA5 download details
 
 The script downloads:
 
 - ERA5 single-level reanalysis
-- variable: `toa_incident_solar_radiation`
+- `toa_incident_solar_radiation`
 - NetCDF format
-- Alpine domain
+- the configured Alpine domain
 - yearly files
 
 The output files are:
@@ -550,7 +617,7 @@ era5_toa_YYYY.nc
 
 stored in:
 
-[`CryoGridCommunity_forcing/meteo/ERA5_test/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5_test/raw/)
+[`CryoGridCommunity_forcing/meteo/ERA5/raw/`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/)
 
 The download is restartable:
 
@@ -559,7 +626,7 @@ The download is restartable:
 
 The corresponding CDS API request is documented in:
 
-[`CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt)
+[`era5_toa_API_request_CDS.txt`](../../../CryoGridCommunity_forcing/meteo/ERA5/raw/era5_toa_API_request_CDS.txt)
 
 ---
 
@@ -667,34 +734,66 @@ Including:
 
 # Running the workflow
 
-Example:
+The simplest way to run the complete meteorological preprocessing workflow is:
 
 ```matlab
-meteo_path = "path/to/meteo";
-
 prepare_forcing(meteo_path)
+```
+
+This assumes that all required raw datasets have already been downloaded.
+
+To automatically acquire SAFRAN/S2M:
+
+```matlab
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadS2M',true, ...
+    'Email','<user email address>')
+```
+
+To automatically acquire ERA5 TOA radiation:
+
+```matlab
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadERA5',true, ...
+    'PythonExecutable','C:\path\to\python.exe')
+```
+
+To acquire both datasets:
+
+```matlab
+prepare_forcing( ...
+    meteo_path, ...
+    'DownloadS2M',true, ...
+    'Email','<user email address>', ...
+    'DownloadERA5',true, ...
+    'PythonExecutable','C:\path\to\python.exe')
 ```
 
 The final output is:
 
-```
+```text
 CryoGrid_ready/
     FORCING_SAFRAN_ALL.mat
 ```
 
 which can directly be used by CryoGrid workflows.
 
+When using the complete CryoGrid VP workflow, the higher-level [`prepare_VP.m`](../../../CryoGridCommunity_run/prepare_VP.m) function can call `prepare_forcing` together with the other VP preparation modules.
+
 ---
 
 # Main scripts and functions
 
-## Workflow
+## Main workflow
 
 - [`prepare_forcing.m`](./prepare_forcing.m)
 
 ## Acquisition
 
 - [`download_S2M_data.m`](./acquisition/download_S2M_data.m)
+- [`download_ERA5_TOA.m`](./acquisition/download_ERA5_TOA.m)
 - [`download_ERA5_TOA_data.py`](./acquisition/download_ERA5_TOA_data.py)
 
 ## SAFRAN
@@ -716,6 +815,10 @@ which can directly be used by CryoGrid workflows.
 - [`build_full_validation.m`](./validation/build_full_validation.m)
 - [`validate_CryoGrid_forcing.m`](./validation/validate_CryoGrid_forcing.m)
 - [`plot_forcing_diagnostics.m`](./validation/plot_forcing_diagnostics.m)
+
+## Complete VP workflow
+
+When `VP_Meteo` is used as part of the complete CryoGrid VP workflow, [`prepare_VP.m`](../../../CryoGridCommunity_run/prepare_VP.m) provides the higher-level entry point and supplies the required paths and configuration automatically.
 
 ---
 

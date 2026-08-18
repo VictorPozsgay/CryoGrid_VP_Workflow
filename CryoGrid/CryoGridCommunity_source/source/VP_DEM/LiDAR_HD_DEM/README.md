@@ -734,6 +734,16 @@ The CSV version is available at:
 
 ---
 
+## Complete VP workflow
+
+`VP_DEM` can also be executed as part of the complete CryoGrid VP
+preparation workflow using [`prepare_VP.m`](../../../CryoGridCommunity_run/prepare_VP.m).
+
+The higher-level workflow automatically provides the required paths and
+runs the VP preparation modules in the appropriate order.
+
+---
+
 # IGN WMS downloads and restart capability
 
 IGN LiDAR HD WMS requests become unreliable for very large images.
