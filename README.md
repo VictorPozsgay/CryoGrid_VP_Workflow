@@ -68,7 +68,7 @@ CryoGridCommunity_forcing/
 Typical MATLAB configuration:
 
 ```matlab
-meteo_path = "CryoGridCommunity_forcing/meteo";
+meteo_path   = "CryoGridCommunity_forcing/meteo";
 dem_path     = "CryoGridCommunity_forcing/DEM";
 geology_path = "CryoGridCommunity_forcing/geology";
 safran_shp   = "CryoGridCommunity_forcing/meteo/SAFRAN/shapefile/massifs_alpes_2154.shp";
