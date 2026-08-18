@@ -1,61 +1,136 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%% Begin user-modified part %%%%%%%%%%%%%%%%%%%%%%%%%
+function [provider] = run_spatial(folder_path,massif_num)
+%RUN_SPATIAL Run a spatial CryoGrid simulation for one SAFRAN massif.
+%
+%   [PROVIDER] = RUN_SPATIAL(FOLDER_PATH,MASSIF_NUM)
+%   initializes the CryoGrid VP workflow, prepares the CryoGrid provider
+%   from the spatial template, runs the model, and organizes the generated
+%   MAT files into a massif-specific output folder.
+%
+%   Input:
+%
+%       FOLDER_PATH - Path relative to the CryoGridCommunity_results
+%                     directory where the simulation output is stored.
+%                     Trailing slashes are optional.
+%
+%                     Example:
+%                         "templates\test_spatial"
+%
+%       MASSIF_NUM  - Numerical SAFRAN massif number.
+%
+%                     Example:
+%                         5
+%
+%   Output:
+%
+%       PROVIDER    - PROVIDER object used to initialize and configure
+%                     the CryoGrid simulation. It contains the resolved
+%                     paths, constants, parameters, and class configuration
+%                     used for the run.
+%
+%   Output organization:
+%
+%       The simulation is initially executed in:
+%
+%           CryoGridCommunity_results/FOLDER_PATH/
+%
+%       After the simulation, generated MAT files are moved to:
+%
+%           CryoGridCommunity_results/FOLDER_PATH/massif_XX/
+%
+%       where XX is the two-digit SAFRAN massif number.
+%
+%       For example, with:
+%
+%           run_spatial("templates\test_spatial",5)
+%
+%       the output files are moved to:
+%
+%           CryoGridCommunity_results/templates/test_spatial/massif_05/
+%
+%
+%   Example:
+%
+%       [run_info,provider,tile] = ...
+%           run_spatial("templates\test_spatial",5);
+%
+%   See also INITIALIZE_CRYOGRID_VP, VP_RETURN_PATHS, PROVIDER,
+%            RUN_MODEL, REPLACE_PATHS_STRINGS.
+%
+% -------------------------------------------------------------------------
+% CryoGrid VP workflow
+% -------------------------------------------------------------------------
 
-[file_path,file_name] = fileparts(mfilename('fullpath'));
+PATHS = initialize_CryoGrid_VP();
 
-while ~strcmp(file_name,'CryoGrid')
-    [file_path,file_name]=fileparts(file_path);
-    ROOT_PATH = char(fullfile(file_path,file_name));
-end
+CG_FORCING_PATH = PATHS.FORCING.root;
+CG_RESULTS_PATH = PATHS.RESULTS.root;
 
-CG_FORCING_PATH = char(fullfile(ROOT_PATH,"CryoGridCommunity_forcing/"));
-CG_RESULTS_PATH = char(fullfile(ROOT_PATH,"CryoGridCommunity_results/"));
-CG_RUN_PATH     = char(fullfile(ROOT_PATH,"CryoGridCommunity_run/"));
-CG_SOURCE_PATH  = char(fullfile(ROOT_PATH,"CryoGridCommunity_source/"));
+% ---------------------------------------------------------------------
+% Prepare output paths
+% ---------------------------------------------------------------------
 
-massif_num    = 5;
-MASSIF_NUM    = sprintf('%02d',massif_num);
-result_path   = char(fullfile(CG_RESULTS_PATH,'templates\'));
-run_name      = 'test_spatial'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
-TARGET_FOLDER = char(fullfile(result_path,run_name));
-constant_file = 'CONSTANTS_excel'; %filename of file storing constants
+% Remove trailing slashes from the supplied folder path.
+folder_path = regexprep(folder_path,'[\\/]+$','');
+
+TARGET_FOLDER = char(fullfile(CG_RESULTS_PATH,folder_path));
+[result_path,run_name] = fileparts(TARGET_FOLDER);
+result_path = char([result_path filesep]);
+run_name    = char(run_name);
+
+% Zero-padded massif identifier used in file and folder names.
+MASSIF_NUM = char(sprintf('%02d',massif_num));
+massif_folder = fullfile(TARGET_FOLDER,sprintf('massif_%s',MASSIF_NUM));
+
+% ---------------------------------------------------------------------
+% CryoGrid initialization settings
+% ---------------------------------------------------------------------
+
+constant_file = 'CONSTANTS_excel';
 init_format   = 'EXCEL3D';
 
+% ---------------------------------------------------------------------
+% Create and load PROVIDER
+% ---------------------------------------------------------------------
 
-%%%%%%%%%%%%%%%%%%%%%%%% end user-modified part %%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% -------------------------------------------------------------------------
-%                             do not change
-% -------------------------------------------------------------------------
-
-% add source code path
-addpath(genpath(CG_SOURCE_PATH));
-
-%create and load PROVIDER
 provider = PROVIDER;
-provider = assign_paths(provider, init_format, run_name, result_path, constant_file);
+
+provider = assign_paths( ...
+    provider, ...
+    init_format, ...
+    run_name, ...
+    result_path, ...
+    constant_file);
+
 provider = read_const(provider);
+
 provider = read_parameters(provider);
-provider = replace_PATHS_strings(provider, ...
+
+% Replace placeholders in the CryoGrid parameter file.
+%
+% REPLACE_PATHS_STRINGS performs the substitutions as character data.
+% The massif_num parameter is subsequently interpreted numerically by
+% the corresponding CryoGrid class.
+
+provider = replace_PATHS_strings( ...
+    provider, ...
     {'TARGET_FOLDER';'CG_FORCING_PATH';'MASSIF_NUM';'massif_num'}, ...
     {TARGET_FOLDER;CG_FORCING_PATH;MASSIF_NUM;massif_num});
 
+% ---------------------------------------------------------------------
+% Run CryoGrid
+% ---------------------------------------------------------------------
 
-% create RUN_INFO class
- [run_info, provider] = run_model(provider);
-% run model
- [run_info, tile] = run_model(run_info);
+[run_info,provider] = run_model(provider);
+[run_info,tile] = run_model(run_info);
 
-% toc
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% move files %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-massif_folder = fullfile(TARGET_FOLDER,sprintf('massif_%s',MASSIF_NUM));
+% ---------------------------------------------------------------------
+% Organize output files
+% ---------------------------------------------------------------------
 
 if ~isfolder(massif_folder)
-    mkdir(massif_folder)
+    mkdir(massif_folder);
 end
 
-movefile(fullfile(TARGET_FOLDER,'*.mat'),massif_folder)
+movefile(fullfile(TARGET_FOLDER,'*.mat'),massif_folder);
+
+end
