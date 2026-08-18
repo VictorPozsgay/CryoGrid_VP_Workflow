@@ -11,13 +11,13 @@ This repository contains tools for:
 
 ---
 
-# Repository structure
+## Repository structure
 
 ```text
 CryoGrid_VP_Workflow/
-
-├── CryoGrid/
 │
+├── CryoGrid/
+│   │
 │   ├── CryoGridCommunity_source/
 │   │   └── source/
 │   │       ├── VP_Meteo/
@@ -25,6 +25,11 @@ CryoGrid_VP_Workflow/
 │   │       └── VP_Geol/
 │   │
 │   ├── CryoGridCommunity_run/
+│   │   ├── VP_config_template.m
+│   │   ├── VP_config.m
+│   │   ├── prepare_VP.m
+│   │   └── run_spatial.m
+│   │
 │   └── CryoGridCommunity_results/
 │
 └── CryoGridCommunity_forcing/
@@ -35,28 +40,27 @@ CryoGrid_VP_Workflow/
 
 `CryoGridCommunity_forcing/` contains generated datasets and is excluded from Git because products and cached downloads can become very large.
 
-The three preparation workflows are located in:
+The individual preparation workflows are located in:
 
 ```text
 CryoGrid/CryoGridCommunity_source/source/
 
 ├── VP_Meteo/
-│   └── Meteorological forcing preparation
-│
 ├── VP_DEM/
-│   └── DEM and topographic processing
-│
 └── VP_Geol/
-    └── Geological dataset preparation
 ```
 
-Each workflow has its own README.
+The user-facing entry point is:
+
+```text
+CryoGrid/CryoGridCommunity_run/
+```
 
 ---
 
 # Canonical paths
 
-The main workflows use:
+The workflow uses:
 
 ```text
 CryoGridCommunity_forcing/
@@ -65,7 +69,17 @@ CryoGridCommunity_forcing/
 └── geology/
 ```
 
-Typical MATLAB configuration:
+These paths are configured through:
+
+[`VP_config.m`](CryoGrid/CryoGridCommunity_run/VP_config.m)
+
+and initialized automatically by:
+
+[`prepare_VP.m`](CryoGrid/CryoGridCommunity_run/prepare_VP.m)
+
+Users therefore do not normally need to define or pass the individual forcing, DEM, geology, or shapefile paths manually.
+
+However, if the user wants to run individual worklows, typical MATLAB configuration:
 
 ```matlab
 meteo_path   = "CryoGridCommunity_forcing/meteo";
@@ -468,23 +482,19 @@ Geological rasters use the same Lambert-93 (EPSG:2154) grid as the corresponding
 
 # CryoGrid integration
 
-The complete preparation chain is:
+The recommended user workflow is:
 
 ```text
-External datasets
+CryoGridCommunity_run/
+        │
+        ├── VP_config.m
         │
         ▼
-┌────────────────────┐
-│ prepare_forcing()  │
-└────────────────────┘
+   prepare_VP.m
         │
-┌────────────────────┐
-│ prepare_dem()      │
-└────────────────────┘
-        │
-┌────────────────────┐
-│ prepare_geology()  │
-└────────────────────┘
+        ├── VP_Meteo
+        ├── VP_DEM
+        └── VP_Geol
         │
         ▼
 CryoGridCommunity_forcing/
@@ -493,10 +503,15 @@ CryoGridCommunity_forcing/
 └── geology/
         │
         ▼
+   run_spatial.m
+        │
+        ▼
 CryoGrid simulations
 ```
 
-The DEM and geology workflows use the same spatial reference and DEM grid, allowing the resulting environmental variables to be combined for CryoGrid simulations and subsequent spatial analyses.
+The preparation workflow is restartable and reuses existing products where possible.
+
+The simulation workflow is currently under development and may change as the VP workflow evolves.
 
 ---
 
@@ -513,34 +528,40 @@ Additional MATLAB toolboxes may be required depending on the workflow and specif
 
 # Quick start
 
-Clone the repository:
+The user-facing workflow is located in:
 
-```bash
-git clone <repository-url>
-```
+[`CryoGrid/CryoGridCommunity_run/`](CryoGrid/CryoGridCommunity_run/)
 
-Add the MATLAB source tree:
+First create the local configuration:
+
+[`VP_config_template.m`](CryoGrid/CryoGridCommunity_run/VP_config_template.m)
+
+→ copy to
+
+[`VP_config.m`](CryoGrid/CryoGridCommunity_run/VP_config.m)
+
+and edit the machine-specific settings.
+
+Then, from MATLAB:
 
 ```matlab
-addpath(genpath("CryoGrid/CryoGridCommunity_source/source"))
+prepare_VP
 ```
 
-Then run the required preparation workflow.
+This prepares the meteorological, DEM, and geological datasets.
 
-### Meteorological forcing
+After preparation:
 
-[`prepare_forcing.m`](CryoGrid/CryoGridCommunity_source/source/VP_Meteo/prepare_forcing.m)
+```matlab
+run_spatial
+```
 
-[SAFRAN S2M workflow](CryoGrid/CryoGridCommunity_source/source/VP_Meteo/README.md)
+runs the CryoGrid simulation.
 
-### DEM and topography
+The `run_spatial` workflow is currently work in progress and will evolve as the VP workflow is developed.
 
-[`prepare_dem.m`](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/prepare_dem.m)
+For detailed information on the individual preparation workflows, see:
 
-[IGN LiDAR HD DEM workflow](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/README.md)
-
-### Geology
-
-[`prepare_geology.m`](CryoGrid/CryoGridCommunity_source/source/VP_Geol/prepare_geology.m)
-
-[BRGM GEO050K_HARM workflow](CryoGrid/CryoGridCommunity_source/source/VP_Geol/README.md)
+- [VP_Meteo](CryoGrid/CryoGridCommunity_source/source/VP_Meteo/README.md)
+- [VP_DEM](CryoGrid/CryoGridCommunity_source/source/VP_DEM/LiDAR_HD_DEM/README.md)
+- [VP_Geol](CryoGrid/CryoGridCommunity_source/source/VP_Geol/README.md)
