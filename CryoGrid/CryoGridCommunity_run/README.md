@@ -1,16 +1,67 @@
-# CryoGrid community model
+# CryoGridCommunity_run
 
-This is the community version of *CryoGrid*, a numerical model to investigate land surface processes in the terrestrial cryosphere. This version of *CryoGrid* is implemented in MATLAB.
+This folder is the **user-facing entry point** for the CryoGrid VP workflow.
 
-*Note: This is the latest development of the CryoGrid model family. It comprises the functionalities of previous versions including [CryoGrid3](https://github.com/CryoGrid/CryoGrid3), which is no longer encouraged to be used.*
+The workflow is divided into two parts:
 
-## Documentation
+1. **Preparation** — build all required meteorological, topographic, and geological input data.
+2. **Simulation** — run CryoGrid using the prepared datasets.
 
-A manuscript "The CryoGrid community model - a multi-physics toolbox for climate-driven simulations in the terrestrial cryosphere" has been submitted to the journal  Geoscientific Model Development (GMD) which contains a detailed description of the model and instructions to run it (Supplements 1, 3).
+## 1. Configure the workflow
 
-## Getting started
+Copy:
 
-Both [CryoGridCommunity_source](https://github.com/CryoGrid/CryoGridCommunity_source) and [CryoGridCommunity_run](https://github.com/CryoGrid/CryoGridCommunity_run) are required and must be downloaded in the same folder. [CryoGridCommunity_source](https://github.com/CryoGrid/CryoGridCommunity_source) contains the model source code which users should not modify. [CryoGridCommunity_run](https://github.com/CryoGrid/CryoGridCommunity_run) contains the files that must be edited by the user. The script "run_CG.m" is used to start a simulation with the CryoGrid community model, and the user has to specify the name and location of a parameter file which controls all aspects of the model run (see GMD manuscript and Suppl. 1 for details). In addition, a script for displaying key variables of the model output (read_output_and_display.m), and a script to automatically create parameter files in spreadsheet format (create_parameter_file_EXCEL.m) are provided.
+[`VP_config_template.m`](./VP_config_template.m)
 
-An instruction video on downloading the CryoGrid community model and running simple simulations is available here: https://www.youtube.com/watch?v=L1GIurc5_J4&t=372s
-The parameter files and model forcing data for the simple simulations from the video can be downloaded here: http://files.artek.byg.dtu.dk/files/cryogrid/CryoGridExamples/CryoGrid_simpleExamples.zip 
+to:
+
+[`VP_config.m`](./VP_config.m)
+
+and edit the user-specific settings.
+
+`VP_config.m` contains the paths and configuration required by the workflow. It is intentionally ignored by Git because it contains local machine-specific information.
+
+## 2. Prepare the datasets
+
+Run:
+
+[`prepare_VP.m`](./prepare_VP.m)
+
+from MATLAB:
+
+```matlab
+prepare_VP
+```
+
+This automatically initializes the CryoGrid VP paths and runs:
+
+1. **VP_Meteo** — [`source/VP_Meteo/`](../CryoGridCommunity_source/source/VP_Meteo/) — SAFRAN/S2M and ERA5 forcing
+2. **VP_DEM** — [`source/VP_DEM/`](../CryoGridCommunity_source/source/VP_DEM/) — DEM, terrain derivatives, and SVF
+3. **VP_Geol** — [`source/VP_Geol/`](../CryoGridCommunity_source/source/VP_Geol/) — BRGM geology and CryoGrid validity masks
+
+The preparation workflow is restartable and skips products that already exist.
+
+## 3. Run CryoGrid
+
+After preparation, the resulting datasets can be used to run CryoGrid.
+
+The current entry point is:
+
+[`run_spatial.m`](./run_spatial.m)
+
+```matlab
+run_spatial
+```
+
+The exact simulation workflow and user interface are **work in progress** and will evolve as the VP workflow is developed.
+
+For now, [`run_spatial.m`](./run_spatial.m) should be considered the starting point for the actual CryoGrid simulation after [`prepare_VP.m`](./prepare_VP.m) has completed.
+
+## Recommended workflow
+
+```matlab
+prepare_VP
+run_spatial
+```
+
+Users should normally not need to interact directly with the individual functions in [`CryoGridCommunity_source/source/`](../CryoGridCommunity_source/source/). Those functions remain available for advanced or standalone use.
