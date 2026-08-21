@@ -7,153 +7,76 @@ function GEOLOGY_CLASS = classify_BRGM_geology(GEOLOGY)
 %
 % OUTPUT
 %   GEOLOGY_CLASS
-%       Copy of GEOLOGY with additional fields:
-%
-%       CRYOGRID_CLASS
-%       TRIGGERS
-%       TRIGGER_RULES
-%       N_TRIGGERS
-%       CONFIDENCE
+%       Copy of GEOLOGY with:
+%           CRYOGRID_CLASS
+%           TRIGGERS
+%           TRIGGER_RULES
+%           N_TRIGGERS
+%           CONFIDENCE
+%           TRIGGER_HITS
 %
 % CLASSIFICATION
-%   The BRGM descriptions are reduced directly to a small set of
-%   CryoGrid-relevant geological classes:
+%   Classes:
+%       BEDROCK, SCREE, TILL, SEDIMENT, ORGANIC, ICE, UNKNOWN
 %
-%       BEDROCK
-%       SCREE
-%       TILL
-%       SEDIMENT
-%       ORGANIC
-%       ICE
-%       UNKNOWN
-%
-%   Classification priority is defined by RULES.CLASS_ORDER.
-%
-%   First matching class wins for CRYOGRID_CLASS.
-%
-%   ALL matching classes and ALL matching keywords are retained in:
-%
-%       TRIGGERS
-%       TRIGGER_RULES
+%   Classification priority:
+%       1. Exact NOTATION override
+%       2. STRONG keyword matches
+%       3. WEAK keyword matches
+%       4. RULES.CLASS_ORDER resolves ties
 %
 % MATCHING
-%   Keyword matching is deliberately NOT word-aware.
+%   Keyword matching is case-insensitive, accent-tolerant and substring-
+%   based. Keywords may contain several words.
 %
-%   Keywords may therefore:
-%
-%       - occur as substrings of larger words
-%       - contain several words
-%
-%   Matching is accent-tolerant.
+%   Nested matches within the same text word are resolved by keeping only
+%   the longest matching keyword. Unrelated matches are retained.
 %
 % EXCLUSIONS
-%   RULES.EXCLUDE contains global strings which are ignored during
-%   classification.
+%   RULES.EXCLUDE strings are removed from the search text before any
+%   classification rule is evaluated.
 %
-%   Exclusions use the same accent-tolerant matching mechanism as
-%   keywords.
-%
-%   Example:
-%
-%       RULES.EXCLUDE = "Ecenévex"
-%
-%   removes the occurrence of "Ecenévex" from the search text before
-%   classification, preventing the substring "névé" from triggering ICE.
-%
-% -------------------------------------------------------------------------
+%   Matching is tolerant to case, accents and the corrupted character �.
 
-%% ========================================================================
-% 1. LOAD RULES
-% =========================================================================
+%% 1. RULES AND OUTPUT
 
 RULES = BRGM_CryoGrid_rules();
-
-
-%% ========================================================================
-% 2. CREATE WORKING COPY
-% =========================================================================
-
+disp(class(RULES.CLASS_ORDER))
+disp(size(RULES.CLASS_ORDER))
+disp(RULES.CLASS_ORDER)
 GEOLOGY_CLASS = GEOLOGY;
 
 n = numel(GEOLOGY.NOTATION);
-
-
-%% ========================================================================
-% 3. INITIALIZE OUTPUT
-% =========================================================================
+class_order = RULES.CLASS_ORDER(:);
 
 GEOLOGY_CLASS.CRYOGRID_CLASS = repmat("UNKNOWN",n,1);
+GEOLOGY_CLASS.TRIGGERS       = cell(n,1);
+GEOLOGY_CLASS.TRIGGER_RULES  = cell(n,1);
+GEOLOGY_CLASS.N_TRIGGERS     = zeros(n,1);
+GEOLOGY_CLASS.CONFIDENCE     = zeros(n,1);
 
-GEOLOGY_CLASS.TRIGGERS = cell(n,1);
+GEOLOGY_CLASS.TRIGGER_HITS = table( ...
+    zeros(0,1), ...
+    strings(0,1), ...
+    strings(0,1), ...
+    strings(0,1), ...
+    strings(0,1), ...
+    'VariableNames', ...
+    {'ID','CLASS','RULE','STRENGTH','TRIGGERED_TEXT'});
 
-GEOLOGY_CLASS.TRIGGER_RULES = cell(n,1);
-
-GEOLOGY_CLASS.N_TRIGGERS = zeros(n,1);
-
-GEOLOGY_CLASS.CONFIDENCE = zeros(n,1);
-
-
-%% ========================================================================
-% 4. BUILD SEARCH TEXT
-% =========================================================================
-%
-% DESCR may contain:
-%
-%   char
-%   string
-%   cell arrays
-%
-% Convert everything to one searchable string per geological unit.
-%
-% Exclusions are applied here, globally, before any classification rule
-% is evaluated.
-%
-% =========================================================================
+%% 2. BUILD SEARCH TEXT
 
 SEARCH_TEXT = strings(n,1);
 
 for i = 1:n
-
-    d = GEOLOGY.DESCR{i};
-
-    if isempty(d)
-
-        SEARCH_TEXT(i) = "";
-
-    elseif iscell(d)
-
-        SEARCH_TEXT(i) = strjoin( ...
-            string(d(:)), ...
-            " | ");
-
-    else
-
-        SEARCH_TEXT(i) = string(d);
-
-    end
-
+    SEARCH_TEXT(i) = descr_to_string(GEOLOGY.DESCR{i});
 end
 
-
-%% ========================================================================
-% 5. APPLY GLOBAL EXCLUSIONS
-% =========================================================================
-%
-% Every string in RULES.EXCLUDE is removed from the searchable text.
-%
-% The matching is accent-tolerant.
-%
-% This is intentionally independent of the classification keywords.
-%
-% =========================================================================
+%% 3. APPLY GLOBAL EXCLUSIONS
 
 if isfield(RULES,"EXCLUDE") && ~isempty(RULES.EXCLUDE)
 
-    exclusions = string(RULES.EXCLUDE);
-
-    for j = 1:numel(exclusions)
-
-        exclusion = exclusions(j);
+    for exclusion = string(RULES.EXCLUDE)
 
         if strlength(exclusion) == 0
             continue
@@ -162,379 +85,268 @@ if isfield(RULES,"EXCLUDE") && ~isempty(RULES.EXCLUDE)
         pattern = make_pattern(exclusion);
 
         for i = 1:n
-
-            text = char(SEARCH_TEXT(i));
-
-            if isempty(text)
+            if strlength(SEARCH_TEXT(i)) == 0
                 continue
             end
 
             SEARCH_TEXT(i) = string(regexprep( ...
-                text, ...
+                char(SEARCH_TEXT(i)), ...
                 pattern, ...
-                ''));
-
+                '', ...
+                'ignorecase'));
         end
-
     end
-
 end
 
+%% 4. EXACT NOTATION OVERRIDES
 
-%% ========================================================================
-% 6. APPLY CLASSIFICATION RULES
-% =========================================================================
-%
-% Classification has two mechanisms:
-%
-%   1. KEYWORDS
-%      Normal accent-tolerant substring matching.
-%      CLASS_ORDER determines which class wins.
-%
-%   2. NOTATIONS
-%      Exact BRGM NOTATION matches.
-%      These are explicit classification overrides and therefore take
-%      priority over all keyword-based classifications.
-%
-% Every keyword and every notation is nevertheless evaluated so that all
-% triggers are retained for diagnostics.
-%
-% =========================================================================
-
-class_order = string(RULES.CLASS_ORDER);
+notation_class = repmat("",n,1);
 
 for k = 1:numel(class_order)
 
     class_name = class_order(k);
 
     if ~isfield(RULES,char(class_name))
-
         error( ...
             'Class "%s" is present in CLASS_ORDER but has no rule definition.', ...
-            class_name);
-
+            char(class_name));
     end
 
     class_rules = RULES.(char(class_name));
 
-
-    %% ====================================================================
-    % 6A. EXACT NOTATION OVERRIDES
-    % =====================================================================
-    %
-    % NOTATIONS are exact BRGM NOTATION codes.
-    %
-    % They override any classification obtained from keywords.
-    %
-    % =====================================================================
-
-    if isfield(class_rules,"NOTATIONS") && ...
-            ~isempty(class_rules.NOTATIONS)
-
-        notations = string(class_rules.NOTATIONS);
-
-        for j = 1:numel(notations)
-
-            notation_rule = notations(j);
-
-            if strlength(notation_rule) == 0
-                continue
-            end
-
-
-            % -------------------------------------------------------------
-            % Get the BRGM notation for every unit
-            % -------------------------------------------------------------
-
-            notation_hit = false(n,1);
-
-            for i = 1:n
-
-                if iscell(GEOLOGY.NOTATION)
-
-                    notation = string(GEOLOGY.NOTATION{i});
-
-                else
-
-                    notation = string(GEOLOGY.NOTATION(i));
-
-                end
-
-                notation_hit(i) = ...
-                    strcmp(notation,notation_rule);
-
-            end
-
-
-            if ~any(notation_hit)
-                continue
-            end
-
-
-            % -------------------------------------------------------------
-            % Record notation trigger
-            % -------------------------------------------------------------
-
-            hit_indices = find(notation_hit);
-
-            for ii = 1:numel(hit_indices)
-
-                q = hit_indices(ii);
-
-
-                % =========================================================
-                % Trigger class
-                % =========================================================
-
-                if isempty(GEOLOGY_CLASS.TRIGGERS{q})
-
-                    GEOLOGY_CLASS.TRIGGERS{q} = ...
-                        string.empty(0,1);
-
-                end
-
-                if ~any( ...
-                        GEOLOGY_CLASS.TRIGGERS{q} == class_name)
-
-                    GEOLOGY_CLASS.TRIGGERS{q}(end+1,1) = ...
-                        class_name;
-
-                end
-
-
-                % =========================================================
-                % Trigger rule
-                % =========================================================
-                %
-                % Store the notation itself so the diagnostic output makes
-                % it clear that this was a NOTATION override rather than a
-                % keyword trigger.
-                %
-                % =========================================================
-
-                if isempty(GEOLOGY_CLASS.TRIGGER_RULES{q})
-
-                    GEOLOGY_CLASS.TRIGGER_RULES{q} = ...
-                        string.empty(0,1);
-
-                end
-
-                notation_trigger = ...
-                    "NOTATION:" + notation_rule;
-
-                if ~any( ...
-                        GEOLOGY_CLASS.TRIGGER_RULES{q} == ...
-                        notation_trigger)
-
-                    GEOLOGY_CLASS.TRIGGER_RULES{q}(end+1,1) = ...
-                        notation_trigger;
-
-                end
-
-
-                % =========================================================
-                % EXPLICIT OVERRIDE
-                % =========================================================
-                %
-                % A matching NOTATION always wins over keyword-based
-                % classification.
-                %
-                % =========================================================
-
-                GEOLOGY_CLASS.CRYOGRID_CLASS(q) = ...
-                    class_name;
-
-            end
-
-        end
-
+    if ~isfield(class_rules,"NOTATIONS") || ...
+            isempty(class_rules.NOTATIONS)
+        continue
     end
 
+    for notation_rule = string(class_rules.NOTATIONS(:))'
 
-    %% ====================================================================
-    % 6B. KEYWORD MATCHING
-    % =====================================================================
-    %
-    % KEYWORDS remain subject to CLASS_ORDER.
-    %
-    % A keyword can assign a class only if no previous keyword-based or
-    % notation-based rule has already assigned the unit.
-    %
-    % =====================================================================
-
-    if ~isfield(class_rules,"KEYWORDS")
-
-        error( ...
-            'Class "%s" has no KEYWORDS field.', ...
-            class_name);
-
-    end
-
-    keywords = string(class_rules.KEYWORDS);
-
-
-    % =====================================================================
-    % Evaluate every keyword belonging to this class
-    % =====================================================================
-
-    for j = 1:numel(keywords)
-
-        keyword = keywords(j);
-
-        if strlength(keyword) == 0
+        if strlength(notation_rule) == 0
             continue
         end
-
-
-        % -----------------------------------------------------------------
-        % Build accent-tolerant pattern
-        % -----------------------------------------------------------------
-
-        pattern = make_pattern(keyword);
-
-
-        % -----------------------------------------------------------------
-        % Find all units containing this keyword
-        % -----------------------------------------------------------------
-
-        hit = false(n,1);
 
         for i = 1:n
 
-            text = char(SEARCH_TEXT(i));
+            if strcmp( ...
+                    notation_to_string(GEOLOGY.NOTATION,i), ...
+                    notation_rule)
 
-            if isempty(text)
+                notation_class(i) = class_name;
+
+                GEOLOGY_CLASS = add_trigger( ...
+                    GEOLOGY_CLASS, ...
+                    i, ...
+                    class_name, ...
+                    "NOTATION:" + notation_rule);
+
+            end
+
+        end
+    end
+end
+
+%% 5. COLLECT ALL KEYWORD MATCHES
+
+strength_names  = ["WEAK","STRONG"];
+strength_values = [1 2];
+
+keyword_hits = struct( ...
+    'UNIT',{}, ...
+    'CLASS',{}, ...
+    'RULE',{}, ...
+    'STRENGTH',{}, ...
+    'STRENGTH_VALUE',{}, ...
+    'TRIGGERED_TEXT',{});
+
+for k = 1:numel(class_order)
+
+    class_name = class_order(k);
+    class_rules = RULES.(char(class_name));
+
+    for s = 1:numel(strength_names)
+
+        strength_name  = strength_names(s);
+        strength_value = strength_values(s);
+
+        if ~isfield(class_rules,char(strength_name))
+            error( ...
+                'Class "%s" must contain a %s field.', ...
+                char(class_name), ...
+                char(strength_name));
+        end
+
+        keywords = string(class_rules.(char(strength_name)));
+
+        for j = 1:numel(keywords)
+
+            keyword = keywords(j);
+
+            if strlength(keyword) == 0
                 continue
             end
 
-            hit(i) = ~isempty( ...
-                regexpi( ...
+            pattern = make_pattern(keyword);
+
+            for i = 1:n
+
+                text = char(SEARCH_TEXT(i));
+
+                if isempty(text)
+                    continue
+                end
+
+                matches = regexpi( ...
                     text, ...
-                    pattern, ...
-                    'once'));
+                    ['\S*' pattern '\S*'], ...
+                    'match');
 
+                for m = 1:numel(matches)
+
+                    keyword_hits(end+1) = struct( ... %#ok<AGROW>
+                        'UNIT',i, ...
+                        'CLASS',class_name, ...
+                        'RULE',keyword, ...
+                        'STRENGTH',strength_name, ...
+                        'STRENGTH_VALUE',strength_value, ...
+                        'TRIGGERED_TEXT',string(matches{m}));
+
+                end
+            end
         end
+    end
+end
 
+%% 6. REMOVE NESTED KEYWORD MATCHES
 
-        if ~any(hit)
+keep_hit = true(1,numel(keyword_hits));
+
+for h = 1:numel(keyword_hits)
+
+    if ~keep_hit(h)
+        continue
+    end
+
+    unit_h = keyword_hits(h).UNIT;
+    text_h = normalize_for_comparison( ...
+        keyword_hits(h).TRIGGERED_TEXT);
+    rule_h = normalize_for_comparison( ...
+        keyword_hits(h).RULE);
+
+    for g = 1:numel(keyword_hits)
+
+        if h == g || ~keep_hit(g)
             continue
         end
 
-
-        % -----------------------------------------------------------------
-        % Record trigger information
-        % -----------------------------------------------------------------
-
-        hit_indices = find(hit);
-
-        for ii = 1:numel(hit_indices)
-
-            q = hit_indices(ii);
-
-
-            % =============================================================
-            % Trigger class
-            % =============================================================
-
-            if isempty(GEOLOGY_CLASS.TRIGGERS{q})
-
-                GEOLOGY_CLASS.TRIGGERS{q} = ...
-                    string.empty(0,1);
-
-            end
-
-            if ~any( ...
-                    GEOLOGY_CLASS.TRIGGERS{q} == class_name)
-
-                GEOLOGY_CLASS.TRIGGERS{q}(end+1,1) = ...
-                    class_name;
-
-            end
-
-
-            % =============================================================
-            % Trigger keyword
-            % =============================================================
-
-            if isempty(GEOLOGY_CLASS.TRIGGER_RULES{q})
-
-                GEOLOGY_CLASS.TRIGGER_RULES{q} = ...
-                    string.empty(0,1);
-
-            end
-
-            if ~any( ...
-                    GEOLOGY_CLASS.TRIGGER_RULES{q} == keyword)
-
-                GEOLOGY_CLASS.TRIGGER_RULES{q}(end+1,1) = ...
-                    keyword;
-
-            end
-
+        if keyword_hits(g).UNIT ~= unit_h
+            continue
         end
 
+        text_g = normalize_for_comparison( ...
+            keyword_hits(g).TRIGGERED_TEXT);
 
-        % -----------------------------------------------------------------
-        % First keyword match wins
-        % -----------------------------------------------------------------
-        %
-        % A notation override may already have assigned the unit. In that
-        % case, this keyword must NOT replace the explicit notation result.
-        %
-        % -----------------------------------------------------------------
-
-        assign = ...
-            hit & ...
-            GEOLOGY_CLASS.CRYOGRID_CLASS == "UNKNOWN";
-
-        if any(assign)
-
-            GEOLOGY_CLASS.CRYOGRID_CLASS(assign) = ...
-                class_name;
-
+        if ~strcmp(text_h,text_g)
+            continue
         end
 
+        rule_g = normalize_for_comparison( ...
+            keyword_hits(g).RULE);
+
+        % Keep the longer keyword when one contains the other.
+        if length(rule_h) < length(rule_g) && ...
+                contains(rule_g,rule_h)
+
+            keep_hit(h) = false;
+            break
+        end
     end
+end
+
+keyword_hits = keyword_hits(keep_hit);
+
+%% 7. RECORD SURVIVING KEYWORD TRIGGERS
+
+for h = 1:numel(keyword_hits)
+
+    i = keyword_hits(h).UNIT;
+
+    GEOLOGY_CLASS = add_trigger( ...
+        GEOLOGY_CLASS, i, ...
+        keyword_hits(h).CLASS, ...
+        keyword_hits(h).STRENGTH + ":" + keyword_hits(h).RULE);
+
+    GEOLOGY_CLASS.TRIGGER_HITS(end+1,:) = { ...
+        GEOLOGY.ID(i), ...
+        keyword_hits(h).CLASS, ...
+        keyword_hits(h).RULE, ...
+        keyword_hits(h).STRENGTH, ...
+        keyword_hits(h).TRIGGERED_TEXT};
 
 end
 
+%% 8. DETERMINE FINAL CLASSIFICATION
 
-%% ========================================================================
-% 7. FINALIZE TRIGGER INFORMATION
-% =========================================================================
+for i = 1:n
+
+    % Exact NOTATION overrides everything.
+    if strlength(notation_class(i)) > 0
+        GEOLOGY_CLASS.CRYOGRID_CLASS(i) = notation_class(i);
+        continue
+    end
+
+    if isempty(keyword_hits)
+        continue
+    end
+
+    unit_hits = find([keyword_hits.UNIT] == i);
+
+    if isempty(unit_hits)
+        continue
+    end
+
+    strengths = [keyword_hits(unit_hits).STRENGTH_VALUE];
+    strongest = unit_hits(strengths == max(strengths));
+
+    strongest_classes = unique( ...
+        [keyword_hits(strongest).CLASS], ...
+        'stable');
+
+    % CLASS_ORDER resolves equally strong class conflicts.
+    for k = 1:numel(class_order)
+
+        candidate = class_order(k);
+
+        if any(strongest_classes == candidate)
+            GEOLOGY_CLASS.CRYOGRID_CLASS(i) = candidate;
+            break
+        end
+
+    end
+end
+
+%% 9. FINALIZE TRIGGER INFORMATION
 
 for i = 1:n
 
     GEOLOGY_CLASS.N_TRIGGERS(i) = ...
         numel(GEOLOGY_CLASS.TRIGGERS{i});
 
-
     if GEOLOGY_CLASS.N_TRIGGERS(i) > 0
-
-        % Simple diagnostic confidence:
-        %
-        %   1 trigger    -> 1.0
-        %   2 triggers   -> 0.5
-        %   3 triggers   -> 0.333...
-        %
-        % This is NOT a probabilistic confidence.
-        % It only indicates how unambiguous the rule matching was.
-
         GEOLOGY_CLASS.CONFIDENCE(i) = ...
             1 / GEOLOGY_CLASS.N_TRIGGERS(i);
-
-    else
-
-        GEOLOGY_CLASS.CONFIDENCE(i) = 0;
-
     end
-
 end
 
+GEOLOGY_CLASS.TRIGGER_HITS = unique( ...
+    GEOLOGY_CLASS.TRIGGER_HITS, ...
+    'rows', ...
+    'stable');
 
-%% ========================================================================
-% 8. SUMMARY
-% =========================================================================
+GEOLOGY_CLASS.TRIGGER_HITS = sortrows( ...
+    GEOLOGY_CLASS.TRIGGER_HITS, ...
+    {'ID','CLASS','RULE'});
+
+%% 10. CLASSIFICATION SUMMARY
 
 fprintf('\n');
 fprintf('============================================================\n');
@@ -542,13 +354,11 @@ fprintf('BRGM CRYOGRID GEOLOGY CLASSIFICATION\n');
 fprintf('============================================================\n');
 
 fprintf('\nTotal units : %d\n',n);
-
 fprintf('\nCRYOGRID_CLASS:\n');
 
 classes = unique( ...
     GEOLOGY_CLASS.CRYOGRID_CLASS, ...
     'stable');
-
 
 for k = 1:numel(classes)
 
@@ -557,26 +367,18 @@ for k = 1:numel(classes)
     count = nnz( ...
         GEOLOGY_CLASS.CRYOGRID_CLASS == class_name);
 
-    percent = 100 * count / n;
-
     fprintf( ...
         '  %-10s %5d   %6.2f %%\n', ...
-        class_name, ...
+        char(class_name), ...
         count, ...
-        percent);
+        100 * count / n);
 
 end
 
+%% 11. UNKNOWN DIAGNOSTICS
 
-%% ========================================================================
-% 9. UNKNOWN DIAGNOSTICS
-% =========================================================================
-
-unknown = ...
-    GEOLOGY_CLASS.CRYOGRID_CLASS == "UNKNOWN";
-
+unknown = GEOLOGY_CLASS.CRYOGRID_CLASS == "UNKNOWN";
 n_unknown = nnz(unknown);
-
 
 fprintf('\n');
 fprintf('============================================================\n');
@@ -586,68 +388,31 @@ fprintf('============================================================\n');
 fprintf( ...
     'Unknown units : %d (%.1f %%)\n', ...
     n_unknown, ...
-    100*n_unknown/n);
-
+    100 * n_unknown / n);
 
 if isfield(GEOLOGY_CLASS,"AREA_m2")
 
-    unknown_area = ...
-        sum( ...
-            GEOLOGY_CLASS.AREA_m2(unknown), ...
-            'omitnan') / 1e6;
+    unknown_area = sum( ...
+        GEOLOGY_CLASS.AREA_m2(unknown), ...
+        'omitnan') / 1e6;
 
     fprintf( ...
         'Unknown area  : %.1f km2\n', ...
         unknown_area);
-
 end
 
+%% 12. TRIGGER DIAGNOSTICS
 
-%% ========================================================================
-% 10. TRIGGER DIAGNOSTICS
-% =========================================================================
-
-no_trigger = GEOLOGY_CLASS.N_TRIGGERS == 0;
-
-one_trigger = GEOLOGY_CLASS.N_TRIGGERS == 1;
-
+no_trigger       = GEOLOGY_CLASS.N_TRIGGERS == 0;
+one_trigger      = GEOLOGY_CLASS.N_TRIGGERS == 1;
 multiple_trigger = GEOLOGY_CLASS.N_TRIGGERS > 1;
 
+fprintf('\nTRIGGER DIAGNOSTICS:\n');
+fprintf('No trigger     : %d\n',nnz(no_trigger));
+fprintf('One trigger    : %d\n',nnz(one_trigger));
+fprintf('Multiple       : %d\n',nnz(multiple_trigger));
 
-fprintf('\n');
-fprintf('TRIGGER DIAGNOSTICS:\n');
-
-fprintf( ...
-    'No trigger     : %d\n', ...
-    nnz(no_trigger));
-
-fprintf( ...
-    'One trigger    : %d\n', ...
-    nnz(one_trigger));
-
-fprintf( ...
-    'Multiple       : %d\n', ...
-    nnz(multiple_trigger));
-
-
-%% ========================================================================
-% 11. DISPLAY MULTIPLE-TRIGGER UNITS
-% =========================================================================
-%
-% This section is intentionally verbose because it is the main tool for
-% refining the rule vocabulary.
-%
-% Every unit with more than one triggered class is displayed together with:
-%
-%   ID
-%   NOTATION
-%   DESCRIPTION
-%   FINAL CLASS
-%   FIRST MATCHING RULE
-%   ALL TRIGGERED CLASSES
-%   ALL TRIGGERING KEYWORDS
-%
-% =========================================================================
+%% 13. DISPLAY MULTIPLE-TRIGGER UNITS
 
 if any(multiple_trigger)
 
@@ -656,101 +421,24 @@ if any(multiple_trigger)
     fprintf('MULTIPLE CLASSIFICATION TRIGGERS\n');
     fprintf('============================================================\n');
 
-    indices = find(multiple_trigger);
+    for i = find(multiple_trigger).'
 
-    for ii = 1:numel(indices)
-
-        i = indices(ii);
-
-
-        fprintf('\n');
-        fprintf('ID %d\n',GEOLOGY.ID(i));
-
-
-        % ---------------------------------------------------------------
-        % NOTATION
-        % ---------------------------------------------------------------
-
-        if iscell(GEOLOGY.NOTATION)
-
-            notation = string(GEOLOGY.NOTATION{i});
-
-        else
-
-            notation = string(GEOLOGY.NOTATION(i));
-
-        end
-
-        fprintf( ...
-            'NOTATION : %s\n', ...
-            notation);
-
-
-        % ---------------------------------------------------------------
-        % DESCRIPTION
-        % ---------------------------------------------------------------
-
-        d = GEOLOGY.DESCR{i};
-
-        if iscell(d)
-
-            fprintf( ...
-                'DESCR    : %s\n', ...
-                strjoin(string(d(:))," | "));
-
-        else
-
-            fprintf( ...
-                'DESCR    : %s\n', ...
-                string(d));
-
-        end
-
-
-        % ---------------------------------------------------------------
-        % FINAL CLASS
-        % ---------------------------------------------------------------
-
-        fprintf( ...
-            'CLASS    : %s\n', ...
+        fprintf('\nID %d\n',GEOLOGY.ID(i));
+        fprintf('NOTATION : %s\n', ...
+            notation_to_string(GEOLOGY.NOTATION,i));
+        fprintf('DESCR    : %s\n', ...
+            descr_to_string(GEOLOGY.DESCR{i}));
+        fprintf('CLASS    : %s\n', ...
             GEOLOGY_CLASS.CRYOGRID_CLASS(i));
-
-
-        % ---------------------------------------------------------------
-        % ALL TRIGGERED CLASSES
-        % ---------------------------------------------------------------
-
-        fprintf( ...
-            'TRIGGERS : %s\n', ...
-            strjoin( ...
-                GEOLOGY_CLASS.TRIGGERS{i}, ...
-                ", "));
-
-
-        % ---------------------------------------------------------------
-        % ALL TRIGGERING KEYWORDS
-        % ---------------------------------------------------------------
-
-        fprintf( ...
-            'RULES    : %s\n', ...
-            strjoin( ...
-                GEOLOGY_CLASS.TRIGGER_RULES{i}, ...
-                " | "));
+        fprintf('TRIGGERS : %s\n', ...
+            strjoin(GEOLOGY_CLASS.TRIGGERS{i},", "));
+        fprintf('RULES    : %s\n', ...
+            strjoin(GEOLOGY_CLASS.TRIGGER_RULES{i}," | "));
 
     end
-
 end
 
-
-%% ========================================================================
-% 12. DISPLAY UNKNOWN UNITS
-% =========================================================================
-%
-% These are the units which currently have no rule trigger at all.
-%
-% They are the most useful candidates for expanding the rule vocabulary.
-%
-% =========================================================================
+%% 14. DISPLAY UNKNOWN UNITS
 
 if any(no_trigger)
 
@@ -759,160 +447,135 @@ if any(no_trigger)
     fprintf('UNCLASSIFIED UNITS\n');
     fprintf('============================================================\n');
 
-    indices = find(no_trigger);
+    for i = find(no_trigger).'
 
-    for ii = 1:numel(indices)
-
-        i = indices(ii);
-
-
-        fprintf('\n');
-        fprintf('ID %d\n',GEOLOGY.ID(i));
-
-
-        % ---------------------------------------------------------------
-        % NOTATION
-        % ---------------------------------------------------------------
-
-        if iscell(GEOLOGY.NOTATION)
-
-            notation = string(GEOLOGY.NOTATION{i});
-
-        else
-
-            notation = string(GEOLOGY.NOTATION(i));
-
-        end
-
-        fprintf( ...
-            'NOTATION : %s\n', ...
-            notation);
-
-
-        % ---------------------------------------------------------------
-        % DESCRIPTION
-        % ---------------------------------------------------------------
-
-        d = GEOLOGY.DESCR{i};
-
-        if iscell(d)
-
-            fprintf( ...
-                'DESCR    : %s\n', ...
-                strjoin(string(d(:))," | "));
-
-        else
-
-            fprintf( ...
-                'DESCR    : %s\n', ...
-                string(d));
-
-        end
+        fprintf('\nID %d\n',GEOLOGY.ID(i));
+        fprintf('NOTATION : %s\n', ...
+            notation_to_string(GEOLOGY.NOTATION,i));
+        fprintf('DESCR    : %s\n', ...
+            descr_to_string(GEOLOGY.DESCR{i}));
 
     end
+end
 
 end
 
 
 %% ========================================================================
-% LOCAL FUNCTION: ACCENT-TOLERANT REGEXP
-% =========================================================================
+% LOCAL FUNCTIONS
+% ========================================================================
+
+function text = descr_to_string(d)
+
+if isempty(d)
+    text = "";
+elseif iscell(d)
+    text = strjoin(string(d(:))," | ");
+else
+    text = string(d);
+end
+
+end
+
+
+function notation = notation_to_string(notations,i)
+
+if iscell(notations)
+    notation = string(notations{i});
+else
+    notation = string(notations(i));
+end
+
+end
+
+
+function GEOLOGY_CLASS = add_trigger(GEOLOGY_CLASS,i,class_name,rule)
+
+if isempty(GEOLOGY_CLASS.TRIGGERS{i})
+    GEOLOGY_CLASS.TRIGGERS{i} = string.empty(0,1);
+end
+
+if ~any(GEOLOGY_CLASS.TRIGGERS{i} == class_name)
+    GEOLOGY_CLASS.TRIGGERS{i}(end+1,1) = class_name;
+end
+
+if isempty(GEOLOGY_CLASS.TRIGGER_RULES{i})
+    GEOLOGY_CLASS.TRIGGER_RULES{i} = string.empty(0,1);
+end
+
+if ~any(GEOLOGY_CLASS.TRIGGER_RULES{i} == rule)
+    GEOLOGY_CLASS.TRIGGER_RULES{i}(end+1,1) = rule;
+end
+
+end
+
+
+function s = normalize_for_comparison(s)
+
+s = lower(string(s));
+
+s = replace(s,["à","á","â","ã","ä","å"],"a");
+s = replace(s,["è","é","ê","ë"],"e");
+s = replace(s,["ì","í","î","ï"],"i");
+s = replace(s,["ò","ó","ô","õ","ö"],"o");
+s = replace(s,["ù","ú","û","ü"],"u");
+s = replace(s,"ç","c");
+
+s = char(s);
+
+end
+
+
+function pattern = make_pattern(keyword)
+%MAKE_PATTERN Build accent/corruption-tolerant regexp pattern.
 %
-% Converts a keyword into a regular expression which matches both accented
-% and unaccented versions of the relevant Latin characters.
-%
-% Examples:
-%
-%   "névé"   -> matches "névé", "neve", "NEVE", etc.
-%   "calcaire" remains an ordinary substring search.
-%
-% =========================================================================
+% The corrupted character � is treated as one unknown character.
+% Accented characters also match their unaccented and corrupted forms.
 
-    function pattern = make_pattern(keyword)
+keyword = char(string(keyword));
+pattern = '';
 
-        keyword = char(string(keyword));
+for k = 1:numel(keyword)
 
-        pattern = '';
+    switch keyword(k)
 
-        for kk = 1:numel(keyword)
+        case '�'
+            token = '.';
 
-            c = keyword(kk);
+        case {'é','è','ê','ë','É','È','Ê','Ë'}
+            token = '[eéèêë�]';
 
-            switch c
+        case {'à','â','ä','À','Â','Ä'}
+            token = '[aàâä�]';
 
-                case {'é','è','ê','ë','É','È','Ê','Ë'}
+        case {'î','ï','Î','Ï'}
+            token = '[iîï�]';
 
-                    pattern = [ ...
-                        pattern ...
-                        '[eéèêëEÉÈÊË�]']; %#ok<AGROW>
+        case {'ô','ö','Ô','Ö'}
+            token = '[oôö�]';
 
+        case {'ù','û','ü','Ù','Û','Ü'}
+            token = '[uùûü�]';
 
-                case {'à','â','ä','À','Â','Ä'}
+        case {'ÿ','Ÿ'}
+            token = '[yÿ�]';
 
-                    pattern = [ ...
-                        pattern ...
-                        '[aàâäAÀÂÄ�]']; %#ok<AGROW>
+        case {'ç','Ç'}
+            token = '[cç�]';
 
+        case {'œ','Œ'}
+            token = '[œ�]';
 
-                case {'î','ï','Î','Ï'}
+        case {'æ','Æ'}
+            token = '[æ�]';
 
-                    pattern = [ ...
-                        pattern ...
-                        '[iîïIÎÏ�]']; %#ok<AGROW>
-
-
-                case {'ô','ö','Ô','Ö'}
-
-                    pattern = [ ...
-                        pattern ...
-                        '[oôöOÔÖ�]']; %#ok<AGROW>
-
-
-                case {'ù','û','ü','Ù','Û','Ü'}
-
-                    pattern = [ ...
-                        pattern ...
-                        '[uùûüUÙÛÜ�]']; %#ok<AGROW>
-
-
-                case {'ÿ','Ÿ'}
-
-                    pattern = [ ...
-                        pattern ...
-                        '[yÿYŸ�]']; %#ok<AGROW>
-
-
-                case {'ç','Ç'}
-
-                    pattern = [ ...
-                        pattern ...
-                        '[cçCÇ�]']; %#ok<AGROW>
-
-
-                case {'œ','Œ'}
-
-                    pattern = [ ...
-                        pattern ...
-                        '[œŒ�]']; %#ok<AGROW>
-
-
-                case {'æ','Æ'}
-
-                    pattern = [ ...
-                        pattern ...
-                        '[æÆ�]']; %#ok<AGROW>
-
-
-                otherwise
-
-                    pattern = [ ...
-                        pattern ...
-                        regexptranslate('escape',c)]; %#ok<AGROW>
-
-            end
-
-        end
+        otherwise
+            token = regexptranslate('escape',keyword(k));
 
     end
+
+    pattern = [pattern token]; %#ok<AGROW>
+
+end
 
 end

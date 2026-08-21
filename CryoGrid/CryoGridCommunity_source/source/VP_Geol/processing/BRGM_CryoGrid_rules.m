@@ -1,101 +1,110 @@
 function RULES = BRGM_CryoGrid_rules()
-%BRGM_CRYOGRID_RULES Rules for reducing BRGM geological units to CryoGrid classes.
+%BRGM_CRYOGRID_RULES Scientific rules for BRGM -> CryoGrid geology classification.
 %
-% FINAL CRYOGRID CLASSES
+% =========================================================================
+% SCIENTIFIC CLASSIFICATION INPUT
+% =========================================================================
 %
-%   BEDROCK
-%   SCREE
-%   TILL
-%   SEDIMENT
-%   ORGANIC
-%   ICE
-%   UNKNOWN
-%   WATER       % water-mask class
+% This file defines the SCIENTIFIC INPUT to the BRGM geological
+% classification used to generate CryoGrid-compatible geology classes.
 %
-% The rules are intentionally material-oriented rather than attempting to
-% reproduce the previous BROAD_CLASS / MATERIAL_CLASS distinction.
+% The classification is based on:
+%   1. BRGM geological NOTATION codes
+%   2. Keywords identified in BRGM geological descriptions
+%   3. Rule strength (STRONG / WEAK)
+%   4. CLASS_ORDER for resolving equal-strength conflicts
 %
-% Each class may contain:
+% These rules therefore define the scientific interpretation of the BRGM
+% geological database and should be modified deliberately and documented
+% when the classification methodology is changed.
 %
-%   KEYWORDS
-%       Substrings which trigger the class when found in the geological
-%       description.
+% =========================================================================
+% OUTPUT CLASSES
+% =========================================================================
+%
+%   WATER       Water / water-mask units
+%   ORGANIC     Organic-rich deposits, e.g. peat and mire
+%   ICE         Glacier and ice-related terrain, including rock glaciers
+%   SCREE       Scree, rockfall and slope-failure deposits
+%   TILL        Glacial / moraine-derived unconsolidated material
+%   SEDIMENT    Other unconsolidated or sedimentary surface material
+%   BEDROCK     Consolidated geological bedrock
+%   UNKNOWN     Units for which no classification rule is triggered
+%
+% =========================================================================
+% RULE TYPES
+% =========================================================================
+%
+% Each material class may define:
+%
+%   STRONG
+%       Strong diagnostic keywords. These have the highest classification
+%       strength.
+%
+%   WEAK
+%       Less diagnostic keywords. These are used only when no stronger
+%       classification signal is present.
 %
 %   NOTATIONS
-%       Exact BRGM geological NOTATION codes which trigger the class.
-%       This is useful when the description alone does not provide a
-%       sufficiently specific material indicator.
+%       Exact BRGM NOTATION codes providing a direct classification.
 %
 %   EXCLUDE
-%       Strings which suppress a specific keyword match.
+%       Global text patterns used to suppress known false-positive
+%       keyword matches.
 %
-% Keyword matching is deliberately NOT word-aware:
+% =========================================================================
+% CLASSIFICATION LOGIC
+% =========================================================================
 %
-%   - keywords may be substrings of larger words when scientifically useful
-%   - multi-word keywords are supported
-%   - accented characters are matched using accent-tolerant patterns by the
-%     classification engine
+% Classification strength:
 %
-% For example:
+%       STRONG > WEAK
 %
-%   KEYWORD = "coulées de boue"
+% If several classes have the same strongest signal, CLASS_ORDER determines
+% the winning class. The order therefore represents the scientific
+% precedence assigned to competing material interpretations.
 %
-% matches descriptions containing encoding-corrupted variants such as
-% "Coul�es de boues", provided the difference is limited to the tolerated
-% accented-character substitutions.
+% Current precedence:
 %
-% NOTATIONS are handled separately from keyword matching. They should be
-% used only where the BRGM NOTATION itself provides a sufficiently reliable
-% classification signal.
+%       WATER > ORGANIC > ICE > SCREE > TILL > SEDIMENT > BEDROCK
 %
-% Example:
+% This allows specific surface-material indicators to override generic
+% geological lithology. For example, "colluvions à éléments calcaires"
+% should be classified as SEDIMENT rather than BEDROCK.
 %
-%   RULES.BEDROCK.NOTATIONS = [
-%       "Rc"
-%       "Rt"
-%   ];
+% Exact NOTATION rules override keyword-based classification.
 %
-% Then units with NOTATION "Rc" or "Rt" are classified as BEDROCK even if
-% their description contains no BEDROCK keyword.
+% =========================================================================
+% KEYWORD MATCHING
+% =========================================================================
 %
-% EXCLUSIONS
+% Keywords are intentionally matched as substrings rather than requiring
+% complete words. Multi-word keywords are supported.
 %
-% EXCLUDE entries are used to suppress specific false-positive keyword
-% matches without removing the keyword itself from the rule set.
+% The classification engine handles accented-character encoding issues
+% present in the source BRGM database.
 %
-% Example:
+% Nested keyword matches are resolved so that a more specific match is
+% retained when one keyword is contained within another.
 %
-%   KEYWORD = "névé"
-%   EXCLUDE = "Ecenévex"
+% EXCLUDE rules are used only for documented false-positive cases and do
+% not remove the corresponding scientific keyword from the rule set.
 %
-% Then "névé" can match normally, while the occurrence inside "Ecenévex"
-% is ignored.
+% =========================================================================
+% METHODOLOGICAL NOTE
+% =========================================================================
 %
-% CLASSIFICATION PRIORITY
+% The purpose of this classification is to reduce the detailed BRGM
+% geological units to a small number of material classes suitable for
+% CryoGrid modelling. It is therefore a MATERIAL-ORIENTED classification,
+% not a reproduction of the original BRGM geological taxonomy.
 %
-% The order in CLASS_ORDER defines the priority of competing classes.
-% The classification engine uses FIRST MATCH WINS for the final
-% CRYOGRID_CLASS.
-%
-% The classification engine should nevertheless retain ALL triggered
-% classes and triggering keywords/notational rules for diagnostics.
-%
-% Current philosophy:
-%
-%   WATER
-%   ORGANIC
-%   ICE
-%   SCREE
-%   TILL
-%   SEDIMENT
-%   BEDROCK
-%
-% More specific surface-material and mask indicators therefore override
-% generic geological-rock terms.
+% The rules below constitute the scientific classification definition.
 %
 % =========================================================================
 
 RULES = struct();
+
 
 
 %% ========================================================================
@@ -109,6 +118,7 @@ RULES = struct();
 %
 % Current philosophy:
 %
+%   WATER
 %   ORGANIC
 %   ICE
 %   SCREE
@@ -136,11 +146,14 @@ RULES.CLASS_ORDER = [
 % ORGANIC
 % =========================================================================
 
-RULES.ORGANIC.KEYWORDS = [
+RULES.ORGANIC.STRONG = [
     "tourbe"
     "tourbière"
     "marais"
     "mire"
+];
+
+RULES.ORGANIC.WEAK = [
 ];
 
 
@@ -157,7 +170,7 @@ RULES.ORGANIC.KEYWORDS = [
 %
 % =========================================================================
 
-RULES.ICE.KEYWORDS = [
+RULES.ICE.STRONG = [
     "névé"
     "cryokarst"
     "glacier rocheux"
@@ -165,12 +178,15 @@ RULES.ICE.KEYWORDS = [
     "glace"
 ];
 
+RULES.ICE.WEAK = [
+];
+
 
 %% ========================================================================
 % SCREE
 % =========================================================================
 
-RULES.SCREE.KEYWORDS = [
+RULES.SCREE.STRONG = [
     "éboulis"
     "éboulement"
     "écroulement"
@@ -181,6 +197,9 @@ RULES.SCREE.KEYWORDS = [
     "cône d'éboulis"
     "glissement"
     "glissé"
+];
+
+RULES.SCREE.WEAK = [
 ];
 
 
@@ -195,14 +214,18 @@ RULES.SCREE.KEYWORDS = [
 %
 % =========================================================================
 
-RULES.TILL.KEYWORDS = [
+RULES.TILL.STRONG = [
     "moraine"
     "morainique"
     "dépôt glaciaire"
     "dépôts glaciaires"
     "dépôt glaciaux"
     "dépôts glaciaux"
-    "till"
+    % "till"          % get rid of it because it ONLY triggers excluded
+    % words such as "lentille", "Chatillon", and "Chastillon"
+];
+
+RULES.TILL.WEAK = [
 ];
 
 
@@ -218,11 +241,10 @@ RULES.TILL.KEYWORDS = [
 %
 % =========================================================================
 
-RULES.SEDIMENT.KEYWORDS = [
+RULES.SEDIMENT.STRONG = [
 
     % General sediment / deposits
     "sédiment"
-    "dépôt"
     "cône de déjection"
     "cônes de déjection"
 
@@ -230,7 +252,6 @@ RULES.SEDIMENT.KEYWORDS = [
     "alluvion"
     "fluviatile"
     "fluvial"
-    "torrent"
 
     % Colluvial / slope deposits
     "colluvion"
@@ -242,7 +263,6 @@ RULES.SEDIMENT.KEYWORDS = [
 
     % Fine sediment
     "argile"
-    "argilo"
     "limon"
     "sable"
     "loess"
@@ -278,6 +298,32 @@ RULES.SEDIMENT.KEYWORDS = [
 
     % Travertine
     "travertin"
+
+    % Anthropique
+    "anthropique"
+    "artificiel"
+];
+
+RULES.SEDIMENT.WEAK = [
+    "argileuse"
+    "argileux"
+    "argilo"
+    "caillouteuse"
+    "caillouteux"
+    "caillouto"
+    "conglomératique"
+    "glauconieuse"
+    "glauconieux"
+    "limoneuse"
+    "limoneux"
+    "limono"
+    "pélitique"
+    "sableuse"
+    "sableux"
+    "sablo"
+    "silteuse"
+    "silteux"
+    "silto"
 ];
 
 
@@ -299,7 +345,7 @@ RULES.SEDIMENT.KEYWORDS = [
 %
 % =========================================================================
 
-RULES.BEDROCK.KEYWORDS = [
+RULES.BEDROCK.STRONG = [
 
     % Carbonate rocks
     "calcaire"
@@ -320,11 +366,10 @@ RULES.BEDROCK.KEYWORDS = [
 
     % Metamorphic rocks
     "schiste"
-    "schisto"
     "gneiss"
     "quartzite"
     "micaschiste"
-    "migmat"
+    "migmatite"
     "amphibolite"
     "anatexite"
     "agmatite"
@@ -369,7 +414,6 @@ RULES.BEDROCK.KEYWORDS = [
     "ophiolitique"
     "serpentinite"
     "tuf"
-    "métamorphique"
     "cristallin"
 
     % Mineralised rocks
@@ -388,6 +432,44 @@ RULES.BEDROCK.KEYWORDS = [
     "olistolithique"
     "urgonien"
     "argilite"
+];
+
+RULES.BEDROCK.WEAK = [
+    "albitique"
+    "calcaro"
+    "gneissique"
+    "granitisé"
+    "granitoïde"
+    "granitique"
+    "gréseuse"
+    "gréseux"
+    "gréso"
+    "gypseuse"
+    "gypseux"
+    "karstique"
+    "marbreuse"
+    "marbreux"
+    "marneuse"
+    "marneux"
+    "marno"
+    "métamorphique"
+    "micacé"
+    "migmatiques"
+    "migmatisé"
+    "migmatitique"
+    "quartzeux"
+    "quartzo"
+    "quartzique"
+    "quartziteux"
+    "quartzitique"
+    "schisteuse"
+    "schisteux"
+    "schisto"
+    "siliceuse"
+    "siliceux"
+    "silicieuse"
+    "silicieux"
+    "silico"
 ];
 
 RULES.BEDROCK.NOTATIONS = [
@@ -418,8 +500,11 @@ RULES.BEDROCK.NOTATIONS = [
 % WATER
 % =========================================================================
 
-RULES.WATER.KEYWORDS = [
+RULES.WATER.STRONG = [
     "hydro"
+];
+
+RULES.WATER.WEAK = [
 ];
 
 
@@ -428,8 +513,17 @@ RULES.WATER.KEYWORDS = [
 % =========================================================================
 
 RULES.EXCLUDE = [
-    "Ecenévex"   % névé
-    "lentilles"  % till
+    "Ecenévex"    % névé
+    "Genève"      % névé
+    "Grésivaudan" % grès
+    "inframorainique"
+    "non migmatitique"
+    "non calcaire"
+    "Nappe de la Brèche"
+    "Nappe des Gypses"
+    % "lentille"    % till
+    % "Chastillon"  % till
+    % "Chatillon"   % till
 ];
 
 end
