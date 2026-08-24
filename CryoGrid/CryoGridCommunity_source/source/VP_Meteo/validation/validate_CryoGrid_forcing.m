@@ -51,15 +51,36 @@ fprintf(' CryoGrid forcing validation\n')
 fprintf('============================================================\n\n')
 
 forcing_file = fullfile(meteo_path,"FORCING_SAFRAN_ALL.mat");
+
 if ~isfile(forcing_file)
     error("File not found:\n%s",forcing_file)
 end
 
+%% ========================================================================
+% Existing validation report
+% ========================================================================
 
-%% Output file
-
-report_file = fullfile(diagnostic_path,...
+report_file = fullfile( ...
+    diagnostic_path, ...
     "FORCING_validation_report.txt");
+
+if isfile(report_file)
+
+    fprintf("Validation report already exists:\n")
+    fprintf("%s\n",report_file)
+    fprintf("Skipping forcing validation.\n")
+
+    return
+
+end
+
+%% ========================================================================
+% Output file
+% ========================================================================
+
+if ~isfolder(diagnostic_path)
+    mkdir(diagnostic_path)
+end
 
 fid = fopen(report_file,'w');
 

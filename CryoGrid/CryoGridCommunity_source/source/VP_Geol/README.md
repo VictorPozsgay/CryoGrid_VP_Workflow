@@ -12,8 +12,9 @@ The workflow:
 4. rasterizes the original BRGM geological units onto the CryoGrid DEM grids,
 5. builds a reduced inventory containing only geological units present in the modelling domain,
 6. classifies the BRGM geological units into a reduced set of CryoGrid geological classes,
-7. converts the original BRGM geological rasters into CryoGrid integer-class rasters.
+7. converts the original BRGM geological rasters into CryoGrid integer-class rasters,
 8. builds the final CryoGrid mask,
+9. (optionally) plots visualizations of the CryoGrid geological classes.
 
 The workflow preserves the traceability of every CryoGrid geological class back to the original BRGM `ID_original` and `NOTATION`.
 
@@ -62,17 +63,24 @@ BRGM_GEO050K_HARM/
 │   │   ├── GEOLOGY_massif_02.tif
 │   │   └── ...
 │   │
-│   └── raster_CryoGrid/
-│       ├── GEOLOGY_massif_01.tif
-│       ├── GEOLOGY_massif_02.tif
+│   ├── raster_CryoGrid/
+│   │   ├── GEOLOGY_massif_01.tif
+│   │   ├── GEOLOGY_massif_02.tif
+│   │   └── ...
+│   │
+│   └── plots/
+│       ├── GEOLOGY_massif_01.png
+│       ├── GEOLOGY_massif_02.png
 │       └── ...
-│
+|
 └── README.md
 ```
 
 The `raster/` directory contains the original BRGM geological rasters.
 
 The `raster_CryoGrid/` directory contains the final CryoGrid geological-class rasters.
+
+The `plots/` directory optionally contains PNG visualizations of the CryoGrid geological classes.
 
 ---
 
@@ -556,6 +564,43 @@ masking_log.mat
 ```
 
 records the number and percentage of pixels removed by each masking criterion.
+
+---
+
+## 9. Optional CryoGrid geology plots
+
+Function: [`plot_CryoGrid_geology.m`](./plot_CryoGrid_geology.m)
+
+The `prepare_geology` workflow can optionally generate PNG maps of the final CryoGrid geological classes.
+
+The plotting step is enabled with the optional `"PlotGeology"` argument:
+
+```matlab
+prepare_geology( ...
+    geology_path, ...
+    dem_path, ...
+    "PlotGeology",true)
+```
+The plots are saved in:
+
+```matlab
+processed/plots/
+```
+
+with one PNG file per massif:
+
+```matlab
+processed/plots/
+├── GEOLOGY_massif_01.png
+├── GEOLOGY_massif_02.png
+└── ...
+```
+
+The plotting function uses every 5th pixel in both directions to reduce memory use and plotting time. Only one figure is opened at a time and each figure is closed immediately after saving.
+
+Existing plots are reused when all expected PNG files are already present, so the plotting step is also restartable.
+
+The plots use the CryoGrid geological class coding defined in Section 7 and are intended for visual inspection of the final geological products.
 
 ---
 

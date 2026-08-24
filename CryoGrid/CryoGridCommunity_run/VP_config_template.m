@@ -39,7 +39,7 @@ CONFIG.meteo.DownloadS2M = false;
 
 % Email address used for the S2M acquisition.
 %
-% Only used when download_S2M = true.
+% Only used when DownloadS2M = true.
 %
 % Use 'none' when S2M acquisition is disabled.
 
@@ -59,7 +59,7 @@ CONFIG.meteo.DownloadERA5 = false;
 
 % Python executable used for ERA5 acquisition.
 %
-% Required only when download_ERA5 = true.
+% Required only when DownloadERA5 = true.
 %
 % Example:
 %
@@ -139,5 +139,23 @@ CONFIG.dem.SVFMaxDistance = 1000;
 % resolution before starting the workflow.
 
 CONFIG.geology.Resolution = CONFIG.dem.Resolution;
+
+% -------------------------------------------------------------------------
+% Geological visualization
+% -------------------------------------------------------------------------
+
+% Generate PNG maps of the final CryoGrid geological classes.
+%
+% false = do not generate geological plots.
+% true  = generate one PNG map per massif.
+%
+% Plots are written to:
+%
+%     processed/plots/
+%
+% The plotting step uses the already-generated CryoGrid geology rasters
+% and does not rerun the geological classification or raster conversion.
+
+CONFIG.geology.PlotGeology = false;
 
 end

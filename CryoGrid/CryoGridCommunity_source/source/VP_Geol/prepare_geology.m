@@ -22,6 +22,9 @@ function prepare_geology(geology_path,dem_path,varargin)
 %      Creates:
 %          processed/raster_CryoGrid/GEOLOGY_massif_XX.tif
 %   8. Build the final CryoGrid mask.
+%   9. Optionally plot the CryoGrid geology classes.
+%      Creates:
+%          processed/plots/GEOLOGY_massif_XX.png
 %
 % INPUT
 %   geology_path
@@ -45,6 +48,11 @@ function prepare_geology(geology_path,dem_path,varargin)
 %       DEM resolution in metres.
 %       Default = 10
 %
+%   "PlotGeology"
+%       Logical flag controlling whether CryoGrid geology plots are
+%       generated after the final mask has been built.
+%       Default = false
+%
 % EXAMPLE
 %   prepare_geology( ...
 %       "CryoGridCommunity_forcing/geology", ...
@@ -54,6 +62,13 @@ function prepare_geology(geology_path,dem_path,varargin)
 %       "CryoGridCommunity_forcing/geology", ...
 %       "CryoGridCommunity_forcing/DEM", ...
 %       "Resolution",20)
+%
+%   Run the complete workflow and generate geology plots:
+%
+%   prepare_geology( ...
+%       "CryoGridCommunity_forcing/geology", ...
+%       "CryoGridCommunity_forcing/DEM", ...
+%       "PlotGeology",true)
 %
 % SEE ALSO
 %   prepare_dem
@@ -65,6 +80,7 @@ function prepare_geology(geology_path,dem_path,varargin)
 %   classify_BRGM_geology
 %   raster_conversion
 %   build_final_mask
+%   plot_CryoGrid_geology
 
 %% Add local functions
 
@@ -73,9 +89,14 @@ addpath(genpath(fileparts(mfilename("fullpath"))))
 %% Options
 
 p = inputParser;
+
 addParameter(p,"Resolution",10)
+addParameter(p,"PlotGeology",false,@(x)islogical(x) && isscalar(x))
+
 parse(p,varargin{:})
-resolution = p.Results.Resolution;
+
+resolution  = p.Results.Resolution;
+plot_geology = p.Results.PlotGeology;
 
 %% Paths
 
@@ -128,6 +149,13 @@ raster_conversion(brgm_path)
 
 print_step(8,"Build final mask")
 build_final_mask(brgm_path,dem_folder)
+
+%% Step 9 (Optional)
+
+if plot_geology
+    print_step(9,"Plot CryoGrid geology")
+    plot_CryoGrid_geology(brgm_path)
+end
 
 %% Complete
 

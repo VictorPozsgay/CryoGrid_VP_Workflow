@@ -370,7 +370,7 @@ Existing cached chunks and generated products are reused whenever possible, allo
 
 ---
 
-# LiDAR diagnostics
+## LiDAR diagnostics
 
 Diagnostics are generated with:
 
@@ -461,10 +461,22 @@ The complete workflow consists of:
 6. Classify BRGM geological units into CryoGrid material classes
 7. Convert the original BRGM geological rasters into CryoGrid integer-class rasters
 8. Build final masks retaining pixels with valid DEM, slope, aspect, and geology
+9. Optionally generate PNG maps of the CryoGrid geological classes
+
+The optional plotting step is enabled with:
+
+```matlab
+prepare_geology( ...
+    geology_path, ...
+    dem_path, ...
+    "PlotGeology",true)
+```
+
+Plots are saved in `processed/plots/`.
 
 The workflow is restartable. Individual processing functions skip existing products when their required outputs are already available.
 
-### Geological products
+## Geological products
 
 The main geological products are stored in:
 
@@ -492,9 +504,14 @@ processed/
 │   ├── GEOLOGY_massif_02.tif
 │   └── ...
 │
-└── raster_CryoGrid/
-    ├── GEOLOGY_massif_01.tif
-    ├── GEOLOGY_massif_02.tif
+├── raster_CryoGrid/
+│   ├── GEOLOGY_massif_01.tif
+│   ├── GEOLOGY_massif_02.tif
+│   └── ...
+│
+└── plots/
+    ├── GEOLOGY_massif_01.png
+    ├── GEOLOGY_massif_02.png
     └── ...
 ```
 
@@ -514,7 +531,9 @@ The rasters in `raster_CryoGrid/` contain the final CryoGrid geological class co
 | `7` | `WATER` |
 | `-9999` | NoData |
 
-### Geological classification
+The optional `plots/` directory contains PNG visualizations of the CryoGrid geological classes, with one map per massif.
+
+## Geological classification
 
 The scientific classification is performed by:
 
@@ -543,7 +562,7 @@ CRYOGRID_CODE
 
 The classification therefore does not need to be repeated when producing or regenerating the final geological rasters.
 
-### Raster conversion
+## Raster conversion
 
 The final conversion is performed by:
 
@@ -573,7 +592,7 @@ processed/raster_CryoGrid/GEOLOGY_massif_XX.tif
 
 The original BRGM rasters are never modified.
 
-### Final masks
+## Final masks
 
 The final masks are stored with the corresponding DEM resolution:
 
@@ -594,6 +613,9 @@ A pixel is retained only when valid data are available for:
 - CryoGrid geology
 
 The geological rasters use the same Lambert-93 (EPSG:2154) spatial grid as the corresponding DEM products and retain traceability to the original BRGM geological units.
+
+---
+
 # CryoGrid integration
 
 The recommended user workflow is:

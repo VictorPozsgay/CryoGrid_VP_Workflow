@@ -86,9 +86,28 @@ for im = 1:Nm
     massif_folder = fullfile( ...
         output_folder,...
         sprintf("massif_%d_%s",massif_num,massif_name));
-
+    
     if ~isfolder(massif_folder)
         mkdir(massif_folder)
+    end
+    
+    %% ------------------------------------------------------------
+    % Existing diagnostic products
+    %% ------------------------------------------------------------
+    
+    expected_files = [
+        fullfile(massif_folder,"vertical_state.png")
+        fullfile(massif_folder,"radiation_profiles.png")
+        fullfile(massif_folder,"gradients.png")
+        fullfile(massif_folder,"time_series.png")
+        fullfile(massif_folder,"seasonal_cycle.png")
+    ];
+    
+    if all(isfile(expected_files))
+    
+        fprintf("  All diagnostic plots already exist - skipping massif.\n\n")
+        continue
+    
     end
 
     z = double(D.z(:));
