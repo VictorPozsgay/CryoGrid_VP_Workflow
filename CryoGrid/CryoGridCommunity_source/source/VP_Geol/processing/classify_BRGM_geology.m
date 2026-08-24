@@ -1,61 +1,129 @@
-function GEOLOGY_CLASS = classify_BRGM_geology(GEOLOGY)
+function classify_BRGM_geology(brgm_path)
 %CLASSIFY_BRGM_GEOLOGY Classify BRGM geological units for CryoGrid.
 %
-% INPUT
-%   GEOLOGY
-%       BRGM geological inventory.
+% SCIENTIFIC INPUT
+%   BRGM GEO050K_HARM geological units represented in the CryoGrid
+%   raster domain. The input inventory is:
 %
-% OUTPUT
-%   GEOLOGY_CLASS
-%       Copy of GEOLOGY with:
-%           CRYOGRID_CLASS
-%           TRIGGERS
-%           TRIGGER_RULES
-%           N_TRIGGERS
-%           CONFIDENCE
-%           TRIGGER_HITS
+%       fullfile(brgm_path,"processed", ...
+%           "BRGM_GEO050K_HARM_raster_inventory.mat")
+%
+%   GEOLOGY_RASTER.ID_original identifies the original BRGM unit and
+%   GEOLOGY_RASTER.NOTATION provides the BRGM geological notation used
+%   by the classification rules.
 %
 % CLASSIFICATION
-%   Classes:
-%       BEDROCK, SCREE, TILL, SEDIMENT, ORGANIC, ICE, UNKNOWN
+%   Final CryoGrid classes:
 %
-%   Classification priority:
-%       1. Exact NOTATION override
-%       2. STRONG keyword matches
-%       3. WEAK keyword matches
-%       4. RULES.CLASS_ORDER resolves ties
+%       UNKNOWN
+%       BEDROCK
+%       SEDIMENT
+%       TILL
+%       SCREE
+%       ICE
+%       ORGANIC
+%       WATER
 %
-% MATCHING
-%   Keyword matching is case-insensitive, accent-tolerant and substring-
-%   based. Keywords may contain several words.
+%   Exact NOTATION rules have priority over keyword rules.
+%   For keyword rules:
 %
-%   Nested matches within the same text word are resolved by keeping only
-%   the longest matching keyword. Unrelated matches are retained.
+%       STRONG > WEAK
 %
-% EXCLUSIONS
-%   RULES.EXCLUDE strings are removed from the search text before any
-%   classification rule is evaluated.
+%   Ties are resolved using RULES.CLASS_ORDER.
 %
-%   Matching is tolerant to case, accents and the corrupted character �.
+% OUTPUT PRODUCTS
+%   Written to:
+%
+%       fullfile(brgm_path,"processed")
+%
+%   1. BRGM_CryoGrid_classification_log.txt
+%      Complete classification statistics and unit-by-unit diagnostics.
+%
+%   2. BRGM_CryoGrid_classification_index.mat
+%      Explicit mapping between the original BRGM unit, its notation,
+%      and the resulting CryoGrid class and numerical code.
+%
+%   The saved index contains:
+%
+%       ID_original
+%       NOTATION
+%       CRYOGRID_CLASS
+%       CRYOGRID_CODE
+%       METADATA
+%
+%   Numerical coding:
+%
+%       0     = UNKNOWN
+%       1     = BEDROCK
+%       2     = SEDIMENT
+%       3     = TILL
+%       4     = SCREE
+%       5     = ICE
+%       6     = ORGANIC
+%       7     = WATER
+%       -9999 = NoData
+%
+% REPRODUCIBILITY
+%   The classification is determined by the BRGM raster-domain inventory,
+%   BRGM_CryoGrid_rules(), and this classification algorithm. The original
+%   BRGM inventory is never modified.
+% 
+% If both output products already exist, classification is skipped.
+%
+% =========================================================================
 
-%% 1. RULES AND OUTPUT
+%% 1. INPUTS AND OUTPUT PATHS
+
+file_path = fullfile( ...
+    brgm_path, ...
+    "processed", ...
+    "BRGM_GEO050K_HARM_raster_inventory.mat");
+
+processed_path = fullfile(brgm_path,"processed");
+
+classification_log_path = fullfile( ...
+    processed_path, ...
+    "BRGM_CryoGrid_classification_log.txt");
+
+classification_index_path = fullfile( ...
+    processed_path, ...
+    "BRGM_CryoGrid_classification_index.mat");
+
+%% Check whether classification is already complete
+
+if isfile(classification_log_path) && ...
+        isfile(classification_index_path)
+
+    fprintf("\n")
+    fprintf("BRGM CryoGrid classification already complete.\n")
+    fprintf("Classification log:\n  %s\n", ...
+        classification_log_path)
+    fprintf("Classification index:\n  %s\n", ...
+        classification_index_path)
+    fprintf("Skipping classification.\n")
+    return
+
+end
+
+%% 2. LOAD SCIENTIFIC INPUT AND RULES
+
+S = load(file_path);
+GEOLOGY = S.GEOLOGY_RASTER;
 
 RULES = BRGM_CryoGrid_rules();
-disp(class(RULES.CLASS_ORDER))
-disp(size(RULES.CLASS_ORDER))
-disp(RULES.CLASS_ORDER)
-GEOLOGY_CLASS = GEOLOGY;
 
 n = numel(GEOLOGY.NOTATION);
 class_order = RULES.CLASS_ORDER(:);
 
-GEOLOGY_CLASS.CRYOGRID_CLASS = repmat("UNKNOWN",n,1);
-GEOLOGY_CLASS.TRIGGERS       = cell(n,1);
-GEOLOGY_CLASS.TRIGGER_RULES  = cell(n,1);
-GEOLOGY_CLASS.N_TRIGGERS     = zeros(n,1);
-GEOLOGY_CLASS.CONFIDENCE     = zeros(n,1);
 
-GEOLOGY_CLASS.TRIGGER_HITS = table( ...
+%% 3. INTERNAL CLASSIFICATION STRUCTURE
+
+CLASSIFICATION.CRYOGRID_CLASS = repmat("UNKNOWN",n,1);
+CLASSIFICATION.TRIGGERS       = cell(n,1);
+CLASSIFICATION.TRIGGER_RULES  = cell(n,1);
+CLASSIFICATION.N_TRIGGERS     = zeros(n,1);
+
+CLASSIFICATION.TRIGGER_HITS = table( ...
     zeros(0,1), ...
     strings(0,1), ...
     strings(0,1), ...
@@ -64,7 +132,8 @@ GEOLOGY_CLASS.TRIGGER_HITS = table( ...
     'VariableNames', ...
     {'ID','CLASS','RULE','STRENGTH','TRIGGERED_TEXT'});
 
-%% 2. BUILD SEARCH TEXT
+
+%% 4. BUILD SEARCH TEXT
 
 SEARCH_TEXT = strings(n,1);
 
@@ -72,7 +141,8 @@ for i = 1:n
     SEARCH_TEXT(i) = descr_to_string(GEOLOGY.DESCR{i});
 end
 
-%% 3. APPLY GLOBAL EXCLUSIONS
+
+%% 5. APPLY GLOBAL EXCLUSIONS
 
 if isfield(RULES,"EXCLUDE") && ~isempty(RULES.EXCLUDE)
 
@@ -85,6 +155,7 @@ if isfield(RULES,"EXCLUDE") && ~isempty(RULES.EXCLUDE)
         pattern = make_pattern(exclusion);
 
         for i = 1:n
+
             if strlength(SEARCH_TEXT(i)) == 0
                 continue
             end
@@ -94,11 +165,13 @@ if isfield(RULES,"EXCLUDE") && ~isempty(RULES.EXCLUDE)
                 pattern, ...
                 '', ...
                 'ignorecase'));
+
         end
     end
 end
 
-%% 4. EXACT NOTATION OVERRIDES
+
+%% 6. EXACT NOTATION OVERRIDES
 
 notation_class = repmat("",n,1);
 
@@ -133,19 +206,19 @@ for k = 1:numel(class_order)
 
                 notation_class(i) = class_name;
 
-                GEOLOGY_CLASS = add_trigger( ...
-                    GEOLOGY_CLASS, ...
+                CLASSIFICATION = add_trigger( ...
+                    CLASSIFICATION, ...
                     i, ...
                     class_name, ...
                     "NOTATION:" + notation_rule);
 
             end
-
         end
     end
 end
 
-%% 5. COLLECT ALL KEYWORD MATCHES
+
+%% 7. COLLECT ALL KEYWORD MATCHES
 
 strength_names  = ["WEAK","STRONG"];
 strength_values = [1 2];
@@ -216,7 +289,8 @@ for k = 1:numel(class_order)
     end
 end
 
-%% 6. REMOVE NESTED KEYWORD MATCHES
+
+%% 8. REMOVE NESTED KEYWORD MATCHES
 
 keep_hit = true(1,numel(keyword_hits));
 
@@ -227,8 +301,10 @@ for h = 1:numel(keyword_hits)
     end
 
     unit_h = keyword_hits(h).UNIT;
+
     text_h = normalize_for_comparison( ...
         keyword_hits(h).TRIGGERED_TEXT);
+
     rule_h = normalize_for_comparison( ...
         keyword_hits(h).RULE);
 
@@ -264,19 +340,21 @@ end
 
 keyword_hits = keyword_hits(keep_hit);
 
-%% 7. RECORD SURVIVING KEYWORD TRIGGERS
+
+%% 9. RECORD SURVIVING KEYWORD TRIGGERS
 
 for h = 1:numel(keyword_hits)
 
     i = keyword_hits(h).UNIT;
 
-    GEOLOGY_CLASS = add_trigger( ...
-        GEOLOGY_CLASS, i, ...
+    CLASSIFICATION = add_trigger( ...
+        CLASSIFICATION, ...
+        i, ...
         keyword_hits(h).CLASS, ...
         keyword_hits(h).STRENGTH + ":" + keyword_hits(h).RULE);
 
-    GEOLOGY_CLASS.TRIGGER_HITS(end+1,:) = { ...
-        GEOLOGY.ID(i), ...
+    CLASSIFICATION.TRIGGER_HITS(end+1,:) = { ...
+        GEOLOGY.ID_original(i), ...
         keyword_hits(h).CLASS, ...
         keyword_hits(h).RULE, ...
         keyword_hits(h).STRENGTH, ...
@@ -284,13 +362,14 @@ for h = 1:numel(keyword_hits)
 
 end
 
-%% 8. DETERMINE FINAL CLASSIFICATION
+
+%% 10. DETERMINE FINAL CLASSIFICATION
 
 for i = 1:n
 
     % Exact NOTATION overrides everything.
     if strlength(notation_class(i)) > 0
-        GEOLOGY_CLASS.CRYOGRID_CLASS(i) = notation_class(i);
+        CLASSIFICATION.CRYOGRID_CLASS(i) = notation_class(i);
         continue
     end
 
@@ -305,7 +384,9 @@ for i = 1:n
     end
 
     strengths = [keyword_hits(unit_hits).STRENGTH_VALUE];
-    strongest = unit_hits(strengths == max(strengths));
+
+    strongest = unit_hits( ...
+        strengths == max(strengths));
 
     strongest_classes = unique( ...
         [keyword_hits(strongest).CLASS], ...
@@ -317,47 +398,101 @@ for i = 1:n
         candidate = class_order(k);
 
         if any(strongest_classes == candidate)
-            GEOLOGY_CLASS.CRYOGRID_CLASS(i) = candidate;
+            CLASSIFICATION.CRYOGRID_CLASS(i) = candidate;
             break
         end
 
     end
 end
 
-%% 9. FINALIZE TRIGGER INFORMATION
+
+%% 11. FINALIZE TRIGGER INFORMATION
 
 for i = 1:n
 
-    GEOLOGY_CLASS.N_TRIGGERS(i) = ...
-        numel(GEOLOGY_CLASS.TRIGGERS{i});
+    CLASSIFICATION.N_TRIGGERS(i) = ...
+        numel(CLASSIFICATION.TRIGGERS{i});
 
-    if GEOLOGY_CLASS.N_TRIGGERS(i) > 0
-        GEOLOGY_CLASS.CONFIDENCE(i) = ...
-            1 / GEOLOGY_CLASS.N_TRIGGERS(i);
-    end
 end
 
-GEOLOGY_CLASS.TRIGGER_HITS = unique( ...
-    GEOLOGY_CLASS.TRIGGER_HITS, ...
+CLASSIFICATION.TRIGGER_HITS = unique( ...
+    CLASSIFICATION.TRIGGER_HITS, ...
     'rows', ...
     'stable');
 
-GEOLOGY_CLASS.TRIGGER_HITS = sortrows( ...
-    GEOLOGY_CLASS.TRIGGER_HITS, ...
+CLASSIFICATION.TRIGGER_HITS = sortrows( ...
+    CLASSIFICATION.TRIGGER_HITS, ...
     {'ID','CLASS','RULE'});
 
-%% 10. CLASSIFICATION SUMMARY
 
-fprintf('\n');
-fprintf('============================================================\n');
-fprintf('BRGM CRYOGRID GEOLOGY CLASSIFICATION\n');
-fprintf('============================================================\n');
+%% 12. CLASSIFICATION CODES
 
-fprintf('\nTotal units : %d\n',n);
-fprintf('\nCRYOGRID_CLASS:\n');
+% Numerical codes used by the subsequent CryoGrid geology raster.
+
+CRYOGRID_CODES = struct( ...
+    "UNKNOWN",  0, ...
+    "BEDROCK",  1, ...
+    "SEDIMENT", 2, ...
+    "TILL",     3, ...
+    "SCREE",    4, ...
+    "ICE",      5, ...
+    "ORGANIC",  6, ...
+    "WATER",    7);
+
+cryogrid_code = zeros(n,1);
+
+for i = 1:n
+
+    class_name = char(CLASSIFICATION.CRYOGRID_CLASS(i));
+
+    if isfield(CRYOGRID_CODES,class_name)
+        cryogrid_code(i) = CRYOGRID_CODES.(class_name);
+    else
+        error( ...
+            'Unknown CryoGrid class "%s" for BRGM ID %d.', ...
+            class_name, ...
+            GEOLOGY.ID_original(i));
+    end
+
+end
+
+
+%% 13. WRITE CLASSIFICATION LOG
+
+fid = fopen(classification_log_path,"w");
+
+if fid == -1
+    error( ...
+        'Could not open classification log for writing: %s', ...
+        classification_log_path);
+end
+
+cleanup_log = onCleanup(@() fclose(fid));
+
+fprintf(fid,'============================================================\n');
+fprintf(fid,'BRGM GEO050K_HARM -> CRYOGRID GEOLOGY CLASSIFICATION\n');
+fprintf(fid,'============================================================\n');
+fprintf(fid,'\n');
+
+fprintf(fid,'Scientific input:\n');
+fprintf(fid,'  %s\n',file_path);
+
+fprintf(fid,'Classification rules:\n');
+fprintf(fid,'  %s\n',which("BRGM_CryoGrid_rules"));
+
+fprintf(fid,'\n');
+fprintf(fid,'Total units : %d\n',n);
+
+
+%% 13.1 CLASSIFICATION SUMMARY
+
+fprintf(fid,'\n');
+fprintf(fid,'============================================================\n');
+fprintf(fid,'CRYOGRID CLASSIFICATION SUMMARY\n');
+fprintf(fid,'============================================================\n');
 
 classes = unique( ...
-    GEOLOGY_CLASS.CRYOGRID_CLASS, ...
+    CLASSIFICATION.CRYOGRID_CLASS, ...
     'stable');
 
 for k = 1:numel(classes)
@@ -365,9 +500,10 @@ for k = 1:numel(classes)
     class_name = classes(k);
 
     count = nnz( ...
-        GEOLOGY_CLASS.CRYOGRID_CLASS == class_name);
+        CLASSIFICATION.CRYOGRID_CLASS == class_name);
 
     fprintf( ...
+        fid, ...
         '  %-10s %5d   %6.2f %%\n', ...
         char(class_name), ...
         count, ...
@@ -375,88 +511,207 @@ for k = 1:numel(classes)
 
 end
 
-%% 11. UNKNOWN DIAGNOSTICS
 
-unknown = GEOLOGY_CLASS.CRYOGRID_CLASS == "UNKNOWN";
+%% 13.2 UNKNOWN DIAGNOSTICS
+
+unknown = CLASSIFICATION.CRYOGRID_CLASS == "UNKNOWN";
 n_unknown = nnz(unknown);
 
-fprintf('\n');
-fprintf('============================================================\n');
-fprintf('UNKNOWN CRYOGRID CLASS\n');
-fprintf('============================================================\n');
+fprintf(fid,'\n');
+fprintf(fid,'============================================================\n');
+fprintf(fid,'UNKNOWN CRYOGRID CLASS\n');
+fprintf(fid,'============================================================\n');
 
 fprintf( ...
+    fid, ...
     'Unknown units : %d (%.1f %%)\n', ...
     n_unknown, ...
     100 * n_unknown / n);
 
-if isfield(GEOLOGY_CLASS,"AREA_m2")
+if isfield(GEOLOGY,"AREA_m2")
 
     unknown_area = sum( ...
-        GEOLOGY_CLASS.AREA_m2(unknown), ...
+        GEOLOGY.AREA_m2(unknown), ...
         'omitnan') / 1e6;
 
     fprintf( ...
+        fid, ...
         'Unknown area  : %.1f km2\n', ...
         unknown_area);
+
 end
 
-%% 12. TRIGGER DIAGNOSTICS
 
-no_trigger       = GEOLOGY_CLASS.N_TRIGGERS == 0;
-one_trigger      = GEOLOGY_CLASS.N_TRIGGERS == 1;
-multiple_trigger = GEOLOGY_CLASS.N_TRIGGERS > 1;
+%% 13.3 TRIGGER DIAGNOSTICS
 
-fprintf('\nTRIGGER DIAGNOSTICS:\n');
-fprintf('No trigger     : %d\n',nnz(no_trigger));
-fprintf('One trigger    : %d\n',nnz(one_trigger));
-fprintf('Multiple       : %d\n',nnz(multiple_trigger));
+no_trigger       = CLASSIFICATION.N_TRIGGERS == 0;
+one_trigger      = CLASSIFICATION.N_TRIGGERS == 1;
+multiple_trigger = CLASSIFICATION.N_TRIGGERS > 1;
 
-%% 13. DISPLAY MULTIPLE-TRIGGER UNITS
+fprintf(fid,'\n');
+fprintf(fid,'============================================================\n');
+fprintf(fid,'TRIGGER DIAGNOSTICS\n');
+fprintf(fid,'============================================================\n');
 
-if any(multiple_trigger)
+fprintf(fid,'No trigger     : %d\n',nnz(no_trigger));
+fprintf(fid,'One trigger    : %d\n',nnz(one_trigger));
+fprintf(fid,'Multiple       : %d\n',nnz(multiple_trigger));
 
-    fprintf('\n');
-    fprintf('============================================================\n');
-    fprintf('MULTIPLE CLASSIFICATION TRIGGERS\n');
-    fprintf('============================================================\n');
+
+%% 13.4 COMPLETE UNIT-BY-UNIT CLASSIFICATION
+
+fprintf(fid,'\n');
+fprintf(fid,'============================================================\n');
+fprintf(fid,'COMPLETE UNIT-BY-UNIT CLASSIFICATION\n');
+fprintf(fid,'============================================================\n');
+
+for i = 1:n
+
+    fprintf(fid,'\n');
+    fprintf(fid,'------------------------------------------------------------\n');
+
+    fprintf(fid,'ID_original  : %d\n', ...
+        GEOLOGY.ID_original(i));
+
+    fprintf(fid,'NOTATION     : %s\n', ...
+        notation_to_string(GEOLOGY.NOTATION,i));
+
+    fprintf(fid,'DESCR        : %s\n', ...
+        descr_to_string(GEOLOGY.DESCR{i}));
+
+    fprintf(fid,'CLASS        : %s\n', ...
+        CLASSIFICATION.CRYOGRID_CLASS(i));
+
+    fprintf(fid,'CODE         : %d\n', ...
+        cryogrid_code(i));
+
+    fprintf(fid,'N_TRIGGERS   : %d\n', ...
+        CLASSIFICATION.N_TRIGGERS(i));
+
+    if isempty(CLASSIFICATION.TRIGGERS{i})
+
+        fprintf(fid,'TRIGGERS     : none\n');
+
+    else
+
+        fprintf(fid,'TRIGGERS     : %s\n', ...
+            strjoin(CLASSIFICATION.TRIGGERS{i},", "));
+
+    end
+
+    if isempty(CLASSIFICATION.TRIGGER_RULES{i})
+
+        fprintf(fid,'RULES        : none\n');
+
+    else
+
+        fprintf(fid,'RULES        : %s\n', ...
+            strjoin(CLASSIFICATION.TRIGGER_RULES{i}," | "));
+
+    end
+
+end
+
+
+%% 13.5 MULTIPLE-TRIGGER SUMMARY
+
+fprintf(fid,'\n');
+fprintf(fid,'============================================================\n');
+fprintf(fid,'MULTIPLE CLASSIFICATION TRIGGERS\n');
+fprintf(fid,'============================================================\n');
+
+if ~any(multiple_trigger)
+
+    fprintf(fid,'None.\n');
+
+else
 
     for i = find(multiple_trigger).'
 
-        fprintf('\nID %d\n',GEOLOGY.ID(i));
-        fprintf('NOTATION : %s\n', ...
-            notation_to_string(GEOLOGY.NOTATION,i));
-        fprintf('DESCR    : %s\n', ...
-            descr_to_string(GEOLOGY.DESCR{i}));
-        fprintf('CLASS    : %s\n', ...
-            GEOLOGY_CLASS.CRYOGRID_CLASS(i));
-        fprintf('TRIGGERS : %s\n', ...
-            strjoin(GEOLOGY_CLASS.TRIGGERS{i},", "));
-        fprintf('RULES    : %s\n', ...
-            strjoin(GEOLOGY_CLASS.TRIGGER_RULES{i}," | "));
+        fprintf(fid, ...
+            'ID %d | NOTATION %s | CLASS %s | TRIGGERS %s\n', ...
+            GEOLOGY.ID_original(i), ...
+            notation_to_string(GEOLOGY.NOTATION,i), ...
+            CLASSIFICATION.CRYOGRID_CLASS(i), ...
+            strjoin(CLASSIFICATION.TRIGGERS{i},", "));
 
     end
+
 end
 
-%% 14. DISPLAY UNKNOWN UNITS
 
-if any(no_trigger)
+%% 13.6 UNCLASSIFIED SUMMARY
 
-    fprintf('\n');
-    fprintf('============================================================\n');
-    fprintf('UNCLASSIFIED UNITS\n');
-    fprintf('============================================================\n');
+fprintf(fid,'\n');
+fprintf(fid,'============================================================\n');
+fprintf(fid,'UNCLASSIFIED UNITS\n');
+fprintf(fid,'============================================================\n');
+
+if ~any(no_trigger)
+
+    fprintf(fid,'None.\n');
+
+else
 
     for i = find(no_trigger).'
 
-        fprintf('\nID %d\n',GEOLOGY.ID(i));
-        fprintf('NOTATION : %s\n', ...
-            notation_to_string(GEOLOGY.NOTATION,i));
-        fprintf('DESCR    : %s\n', ...
+        fprintf(fid, ...
+            'ID %d | NOTATION %s | DESCR %s\n', ...
+            GEOLOGY.ID_original(i), ...
+            notation_to_string(GEOLOGY.NOTATION,i), ...
             descr_to_string(GEOLOGY.DESCR{i}));
 
     end
+
 end
+
+
+%% 13.7 CLOSE LOG
+
+clear cleanup_log
+
+
+%% 14. CREATE SCIENTIFIC CLASSIFICATION INDEX
+
+notation_values = strings(n,1);
+
+for i = 1:n
+    notation_values(i) = ...
+        notation_to_string(GEOLOGY.NOTATION,i);
+end
+
+CLASSIFICATION_INDEX.ID_original = GEOLOGY.ID_original;
+CLASSIFICATION_INDEX.NOTATION = notation_values;
+CLASSIFICATION_INDEX.CRYOGRID_CLASS = ...
+    CLASSIFICATION.CRYOGRID_CLASS;
+CLASSIFICATION_INDEX.CRYOGRID_CODE = cryogrid_code;
+
+CLASSIFICATION_INDEX.METADATA = [ ...
+    "CryoGrid geology classification codes: " + ...
+    "0 = UNKNOWN; " + ...
+    "1 = BEDROCK; " + ...
+    "2 = SEDIMENT; " + ...
+    "3 = TILL; " + ...
+    "4 = SCREE; " + ...
+    "5 = ICE; " + ...
+    "6 = ORGANIC; " + ...
+    "7 = WATER; " + ...
+    "-9999 = NoData"];
+
+
+%% 15. SAVE CLASSIFICATION INDEX
+
+save( ...
+    classification_index_path, ...
+    'CLASSIFICATION_INDEX');
+
+fprintf('\n');
+fprintf('Classification log saved to:\n  %s\n', ...
+    classification_log_path);
+
+fprintf('\n');
+fprintf('Classification index saved to:\n  %s\n', ...
+    classification_index_path);
 
 end
 
@@ -489,22 +744,23 @@ end
 end
 
 
-function GEOLOGY_CLASS = add_trigger(GEOLOGY_CLASS,i,class_name,rule)
+function CLASSIFICATION = add_trigger( ...
+    CLASSIFICATION,i,class_name,rule)
 
-if isempty(GEOLOGY_CLASS.TRIGGERS{i})
-    GEOLOGY_CLASS.TRIGGERS{i} = string.empty(0,1);
+if isempty(CLASSIFICATION.TRIGGERS{i})
+    CLASSIFICATION.TRIGGERS{i} = string.empty(0,1);
 end
 
-if ~any(GEOLOGY_CLASS.TRIGGERS{i} == class_name)
-    GEOLOGY_CLASS.TRIGGERS{i}(end+1,1) = class_name;
+if ~any(CLASSIFICATION.TRIGGERS{i} == class_name)
+    CLASSIFICATION.TRIGGERS{i}(end+1,1) = class_name;
 end
 
-if isempty(GEOLOGY_CLASS.TRIGGER_RULES{i})
-    GEOLOGY_CLASS.TRIGGER_RULES{i} = string.empty(0,1);
+if isempty(CLASSIFICATION.TRIGGER_RULES{i})
+    CLASSIFICATION.TRIGGER_RULES{i} = string.empty(0,1);
 end
 
-if ~any(GEOLOGY_CLASS.TRIGGER_RULES{i} == rule)
-    GEOLOGY_CLASS.TRIGGER_RULES{i}(end+1,1) = rule;
+if ~any(CLASSIFICATION.TRIGGER_RULES{i} == rule)
+    CLASSIFICATION.TRIGGER_RULES{i}(end+1,1) = rule;
 end
 
 end
@@ -528,9 +784,6 @@ end
 
 function pattern = make_pattern(keyword)
 %MAKE_PATTERN Build accent/corruption-tolerant regexp pattern.
-%
-% The corrupted character � is treated as one unknown character.
-% Accented characters also match their unaccented and corrupted forms.
 
 keyword = char(string(keyword));
 pattern = '';
