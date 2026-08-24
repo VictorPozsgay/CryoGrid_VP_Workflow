@@ -89,90 +89,50 @@ if ~isfolder(dem_folder)
     error("DEM folder not found: %s",dem_folder)
 end
 
-%% ============================================================
-% STEP 1 - Download BRGM data
-% =============================================================
+%% Step 1
 
-fprintf("\n================================================\n")
-fprintf("STEP 1 - BRGM download\n")
-fprintf("================================================\n")
-
+print_step(1,"Download BRGM data")
 download_BRGM(raw_path)
 
-%% ============================================================
-% STEP 2 - Merge departments
-% =============================================================
+%% Step 2
 
-fprintf("\n================================================\n")
-fprintf("STEP 2 - BRGM merge\n")
-fprintf("================================================\n")
-
+print_step(2,"Merge departments")
 merge_BRGM_departments(brgm_path)
 
-%% ============================================================
-% STEP 3 - Build geological inventory
-% =============================================================
+%% Step 3
 
-fprintf("\n================================================\n")
-fprintf("STEP 3 - BRGM inventory\n")
-fprintf("================================================\n")
-
+print_step(3,"Build geological inventory")
 build_BRGM_inventory(brgm_path)
 
-%% ============================================================
-% STEP 4 - Rasterize geology
-% =============================================================
+%% Step 4
 
-fprintf("\n================================================\n")
-fprintf("STEP 4 - BRGM rasterization\n")
-fprintf("================================================\n")
-
+print_step(4,"Rasterize BRGM geology")
 rasterize_BRGM_geology(brgm_path,dem_folder)
 
-%% ============================================================
-% STEP 5 - Build raster-domain inventory
-% =============================================================
+%% Step 5
 
-fprintf("\n================================================\n")
-fprintf("STEP 5 - BRGM raster inventory\n")
-fprintf("================================================\n")
-
+print_step(5,"Build raster-domain inventory")
 build_BRGM_raster_inventory(brgm_path)
 
-%% ============================================================
-% STEP 6 - Classify BRGM geology
-% =============================================================
+%% Step 6
 
-fprintf("\n================================================\n")
-fprintf("STEP 6 - BRGM CryoGrid classification\n")
-fprintf("================================================\n")
-
+print_step(6,"Classify BRGM geology for CryoGrid")
 classify_BRGM_geology(brgm_path)
 
-%% ============================================================
-% STEP 7 - Convert geology rasters to CryoGrid codes
-% =============================================================
+%% Step 7
 
-fprintf("\n================================================\n")
-fprintf("STEP 7 - BRGM -> CryoGrid raster conversion\n")
-fprintf("================================================\n")
-
+print_step(7,"Convert geology rasters to CryoGrid codes")
 raster_conversion(brgm_path)
 
-%% ============================================================
-% STEP 8 - Build final mask
-% =============================================================
+%% Step 8
 
-fprintf("\n================================================\n")
-fprintf("STEP 8 - Building final mask\n")
-fprintf("================================================\n")
-
+print_step(8,"Build final mask")
 build_final_mask(brgm_path,dem_folder)
 
 %% Complete
 
 fprintf("\n================================================\n")
-fprintf("prepare_geology completed\n")
+fprintf("prepare_geology() completed\n")
 fprintf("================================================\n")
 
 end

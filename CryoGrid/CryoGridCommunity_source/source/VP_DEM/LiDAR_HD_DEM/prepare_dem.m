@@ -385,4 +385,10 @@ if diagnostics
     run_lidar_diagnostics(output_path,path_shapefile,1);
 end
 
+%% Complete
+
+fprintf("\n================================================\n")
+fprintf("prepare_dem() completed\n")
+fprintf("================================================\n")
+
 end

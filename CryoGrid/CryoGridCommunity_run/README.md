@@ -37,9 +37,9 @@ This automatically initializes the CryoGrid VP paths and runs:
 
 1. **VP_Meteo** — [`source/VP_Meteo/`](../CryoGridCommunity_source/source/VP_Meteo/) — SAFRAN/S2M and ERA5 forcing
 2. **VP_DEM** — [`source/VP_DEM/`](../CryoGridCommunity_source/source/VP_DEM/) — DEM, terrain derivatives, and SVF
-3. **VP_Geol** — [`source/VP_Geol/`](../CryoGridCommunity_source/source/VP_Geol/) — BRGM geology and CryoGrid validity masks
+3. **VP_Geol** — [`source/VP_Geol/`](../CryoGridCommunity_source/source/VP_Geol/) — BRGM geology, CryoGrid geological classification, and CryoGrid validity masks
 
-The preparation workflow is restartable and skips products that already exist.
+The preparation workflow is restartable. Each preparation branch checks its existing products and skips processing when the required outputs are already available.
 
 ## 3. Run CryoGrid
 

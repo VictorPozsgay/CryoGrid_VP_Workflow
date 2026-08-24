@@ -443,27 +443,137 @@ The diagnostics workflow uses common Alpine plotting bounds where appropriate so
 
 Documentation:
 
-[BRGM GEO050K_HARM workflow](CryoGrid/CryoGridCommunity_source/source/VP_Geol/README.md)
+[`BRGM GEO050K_HARM workflow`](CryoGrid/CryoGridCommunity_source/source/VP_Geol/README.md)
 
 Main workflow:
 
 [`prepare_geology.m`](CryoGrid/CryoGridCommunity_source/source/VP_Geol/prepare_geology.m)
 
-The workflow prepares CryoGrid-compatible geological inputs:
+The workflow prepares CryoGrid-compatible geological inputs from the BRGM GEO050K_HARM geological inventory.
 
-1. Downloads BRGM GEO050K_HARM data
-2. Merges Alpine geological polygons
-3. Builds geological inventories
-4. Rasterizes geological units onto the DEM grid
-5. Builds final masks retaining pixels with valid DEM, slope, aspect, and geology
+The complete workflow consists of:
 
-Output:
+1. Download BRGM GEO050K_HARM data
+2. Merge Alpine geological polygons
+3. Build the complete geological inventory
+4. Rasterize geological units onto the DEM grids
+5. Build the raster-domain geological inventory
+6. Classify BRGM geological units into CryoGrid material classes
+7. Convert the original BRGM geological rasters into CryoGrid integer-class rasters
+8. Build final masks retaining pixels with valid DEM, slope, aspect, and geology
+
+The workflow is restartable. Individual processing functions skip existing products when their required outputs are already available.
+
+### Geological products
+
+The main geological products are stored in:
 
 ```text
 CryoGridCommunity_forcing/
 └── geology/
     └── BRGM_GEO050K_HARM/
+        ├── raw/
+        └── processed/
 ```
+
+The processed directory contains:
+
+```text
+processed/
+├── BRGM_GEO050K_HARM_ALPES.mat
+├── BRGM_GEO050K_HARM_inventory.mat
+├── BRGM_GEO050K_HARM_raster_inventory.mat
+│
+├── BRGM_CryoGrid_classification_log.txt
+├── BRGM_CryoGrid_classification_index.mat
+│
+├── raster/
+│   ├── GEOLOGY_massif_01.tif
+│   ├── GEOLOGY_massif_02.tif
+│   └── ...
+│
+└── raster_CryoGrid/
+    ├── GEOLOGY_massif_01.tif
+    ├── GEOLOGY_massif_02.tif
+    └── ...
+```
+
+The rasters in `raster/` contain the original BRGM `ID_original` values.
+
+The rasters in `raster_CryoGrid/` contain the final CryoGrid geological class codes:
+
+| Code | Class |
+|---:|---|
+| `0` | `UNKNOWN` |
+| `1` | `BEDROCK` |
+| `2` | `SEDIMENT` |
+| `3` | `TILL` |
+| `4` | `SCREE` |
+| `5` | `ICE` |
+| `6` | `ORGANIC` |
+| `7` | `WATER` |
+| `-9999` | NoData |
+
+### Geological classification
+
+The scientific classification is performed by:
+
+```text
+classify_BRGM_geology.m
+```
+
+It operates on the raster-domain BRGM inventory and produces:
+
+```text
+processed/BRGM_CryoGrid_classification_log.txt
+processed/BRGM_CryoGrid_classification_index.mat
+```
+
+The classification index explicitly maps:
+
+```text
+ID_original
+    ↓
+NOTATION
+    ↓
+CRYOGRID_CLASS
+    ↓
+CRYOGRID_CODE
+```
+
+The classification therefore does not need to be repeated when producing or regenerating the final geological rasters.
+
+### Raster conversion
+
+The final conversion is performed by:
+
+```text
+raster_conversion.m
+```
+
+It consumes the saved classification index and converts:
+
+```text
+BRGM ID_original → CryoGrid integer code
+```
+
+without rerunning the scientific classification.
+
+Input:
+
+```text
+processed/raster/GEOLOGY_massif_XX.tif
+```
+
+Output:
+
+```text
+processed/raster_CryoGrid/GEOLOGY_massif_XX.tif
+```
+
+The original BRGM rasters are never modified.
+
+### Final masks
 
 The final masks are stored with the corresponding DEM resolution:
 
@@ -476,10 +586,14 @@ CryoGridCommunity_forcing/
             └── masking_log.mat
 ```
 
-Geological rasters use the same Lambert-93 (EPSG:2154) grid as the corresponding DEM products and preserve traceability to the original BRGM geological units.
+A pixel is retained only when valid data are available for:
 
----
+- DEM elevation
+- slope
+- aspect
+- CryoGrid geology
 
+The geological rasters use the same Lambert-93 (EPSG:2154) spatial grid as the corresponding DEM products and retain traceability to the original BRGM geological units.
 # CryoGrid integration
 
 The recommended user workflow is:
