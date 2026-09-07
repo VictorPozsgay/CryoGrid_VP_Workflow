@@ -36,6 +36,13 @@ classdef OUT_FDD_TDD < OUT_BASE
         
 		function out = finalize_init(out, tile)
             
+            if sum(isnan(out.PARA.tag))>0 
+                out.PARA.tag=[];
+            end
+            if sum(isnan(out.PARA.tag2))>0 
+                out.PARA.tag2=[];
+            end
+
 			out.OUTPUT_TIME = tile.FORCING.PARA.start_time + out.PARA.output_timestep;
             out.SAVE_TIME =  tile.FORCING.PARA.end_time;
 
@@ -95,14 +102,17 @@ classdef OUT_FDD_TDD < OUT_BASE
                        mkdir([result_path run_name])
                    end
                    first_stable_cell = find(out.STATVAR.TDD == 0 | out.STATVAR.FDD == 0, 1);
+                   if isempty(first_stable_cell)
+                       first_stable_cell = size(out.STATVAR.TDD,1);
+                   end
 
                    out.STATVAR.TTOP = (out.STATVAR.TDD(first_stable_cell,1) + out.STATVAR.FDD(first_stable_cell,1)) ./ out.STATVAR.time_interval;
                    out.STATVAR.TTOP_depth = out.TEMP.new_grid(first_stable_cell, 1);
                    
-                   if isempty(out.PARA.tag) || all(isnan(out.PARA.tag))
+                   if isempty(out_tag) || all(isnan(out_tag))
                        save([result_path run_name '/' run_name '_OUT_FDD_TDD.mat'], 'out')
                    else
-                       save([result_path run_name '/' run_name '_OUT_FDD_TDD_' out.PARA.tag '.mat'], 'out')
+                       save([result_path run_name '/' run_name '_OUT_FDD_TDD_' out_tag '.mat'], 'out')
                    end
                 end
             end
