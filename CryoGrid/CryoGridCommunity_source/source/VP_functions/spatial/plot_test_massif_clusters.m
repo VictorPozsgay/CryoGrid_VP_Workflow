@@ -3,7 +3,7 @@ addpath(genpath(source_path));
 
 %% Paths
 
-massif_num = 5;
+massif_num = 2;
 
 dem_massifs_folder = "D:\Utilisateurs\pozsgayv\Documents\CryoGrid_VP_Workflow\CryoGrid\CryoGridCommunity_forcing\DEM\LiDAR_HD_DEM_10m\DEM";
 
