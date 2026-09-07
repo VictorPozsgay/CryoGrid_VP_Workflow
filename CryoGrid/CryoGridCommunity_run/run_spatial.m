@@ -120,6 +120,12 @@ provider = replace_PATHS_strings( ...
 % Run CryoGrid
 % ---------------------------------------------------------------------
 
+% Updates number of workers from default (6) to 16
+% delete(gcp('nocreate'));
+% c = parcluster('Processes');
+% c.NumWorkers = 16;
+% saveProfile(c);
+
 [run_info,provider] = run_model(provider);
 [run_info,tile] = run_model(run_info);
 
