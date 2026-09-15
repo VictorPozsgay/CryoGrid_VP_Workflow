@@ -14,6 +14,8 @@ codegen/
 # *.mat
 *[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].mat
 *_merged.mat
+*last_timestep.mat
+*.mat 
 
 # OS
 .DS_Store
@@ -28,7 +30,7 @@ data/
 literature/
 forcing/Forcing_Data
 OLD/
-templates/
+#templates/
 CryoGridCommunity_forcing/
 docs/
 forcing/
