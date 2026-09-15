@@ -16,8 +16,8 @@ CG_SOURCE_PATH  = char(fullfile(ROOT_PATH,"CryoGridCommunity_source/"));
 
 %% The 4 parameters needed to run a simulation
 init_format   = 'EXCEL3D'; % choose the option corresponding to the parameter file format
-run_name      = 'test_spatial'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
-result_path   = char(fullfile(CG_RESULTS_PATH,'templates\'));
+run_name      = 'FORCING_seb_toElevation_Richards'; % name of parameter file (without file extension) AND name of subfolder (in result_path) within which it is located
+result_path   = char(fullfile(CG_RESULTS_PATH,'templates\test_SAFRAN\'));
 constant_file = 'CONSTANTS_excel'; %filename of file storing constants
 
 
@@ -37,9 +37,9 @@ provider = assign_paths(provider, init_format, run_name, result_path, constant_f
 provider = read_const(provider);
 provider = read_parameters(provider);
 
-% % create RUN_INFO class
-%  [run_info, provider] = run_model(provider);
-% % run model
-%  [run_info, tile] = run_model(run_info);
+% create RUN_INFO class
+ [run_info, provider] = run_model(provider);
+% run model
+ [run_info, tile] = run_model(run_info);
 
 % toc

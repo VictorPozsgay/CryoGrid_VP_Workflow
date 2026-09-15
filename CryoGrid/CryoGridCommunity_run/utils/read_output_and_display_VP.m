@@ -1,12 +1,30 @@
 %run header first
 
 simFile = CG_ground;
-surface_altitude = 2840; %in m a.s.l., should normally match the the parameter "altitude" in TILE_1D_standard 
-start_height_above_ground = 4; %in m
-end_depth_below_ground = 10; %in m
 
-yearDisplay = 1960; % false or integer e.g. 1980
-calenderYear = false; % hydrology year if false
+% check if 'depths_below_ground_surface' is populated
+rel_depth_exists = numel(CG_ground.depths_below_ground_surface) > 0;
+
+surface_altitude = [];
+
+if rel_depth_exists
+    surface_altitude = CG_ground.depths(1)+CG_ground.depths_below_ground_surface(1);
+else
+    if CG_ground.timestamp(end)-CG_ground.timestamp(1) >= 365
+        depths_no_nan = all(~isnan(CG_ground.class_number), 2);
+        dy = CG_ground.depths(1)-CG_ground.depths(2);
+        surface_altitude = max(CG_ground.depths(depths_no_nan)) + dy;
+    else
+        error('Not enough time to infer ground elevation, please input it.')
+    end
+end
+
+% surface_altitude = 2840; %in m a.s.l., should normally match the the parameter "altitude" in TILE_1D_standard 
+start_height_above_ground = 4; %in m
+end_depth_below_ground = 30; %in m
+
+yearDisplay = false; % false or integer e.g. 1980
+calenderYear = true; % hydrology year if false
 
 source_path = '../CryoGridCommunity_source';
 addpath(genpath(source_path));
