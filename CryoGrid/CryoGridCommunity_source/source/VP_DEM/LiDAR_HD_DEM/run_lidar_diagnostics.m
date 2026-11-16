@@ -115,33 +115,50 @@ function run_lidar_diagnostics( ...
 %   validate_lidar_dem
 
 %% ========================================================================
-% Parse optional massif number
+% Parse optional argument
 % ========================================================================
 
 massif_number = [];
+independent_mode = false;
 
 if numel(varargin) > 1
-
-    error( ...
-        "run_lidar_diagnostics accepts at most one optional argument: " + ...
-        "massif_number.")
-
+    error("run_lidar_diagnostics accepts at most one optional argument.")
 end
 
 if ~isempty(varargin)
 
-    massif_number = varargin{1};
+    argument = varargin{1};
 
-    if ~isscalar(massif_number) || ...
-            ~isfinite(massif_number) || ...
-            massif_number ~= round(massif_number) || ...
-            massif_number < 1
+    if (ischar(argument) || isstring(argument)) && ...
+            strcmpi(string(argument),"Independent")
 
-        error( ...
-            "massif_number must be a positive integer.")
+        independent_mode = true;
+
+    else
+
+        massif_number = argument;
+
+        if ~isnumeric(massif_number) || ...
+                ~isscalar(massif_number) || ...
+                ~isfinite(massif_number) || ...
+                massif_number ~= round(massif_number) || ...
+                massif_number < 1
+
+            error("massif_number must be a positive integer.")
+
+        end
 
     end
 
+end
+
+if nargin >= 3 && ...
+        (ischar(varargin{1}) || isstring(varargin{1})) && ...
+        strcmpi(varargin{1}, "Independent")
+
+    plot_all_massifs_topography(output_path, struct());
+
+    return;
 end
 
 %% ========================================================================
@@ -173,6 +190,30 @@ end
 if ~isfolder(save_folder)
 
     mkdir(save_folder)
+
+end
+
+%% Independent massif visualization
+
+if independent_mode
+
+    fprintf("\n")
+    fprintf("============================================================\n")
+    fprintf(" Independent massif topography diagnostics\n")
+    fprintf("============================================================\n")
+
+    plot_all_massifs_topography( ...
+        output_path, ...
+        struct());
+
+    fprintf("\nIndependent massif diagnostics completed.\n")
+
+    copyfile( ...
+        fullfile(output_path,"diagnostics"), ...
+        fullfile(fileparts(mfilename("fullpath")),"diagnostics"), ...
+        "f");
+
+    return
 
 end
 

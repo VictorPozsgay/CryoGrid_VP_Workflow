@@ -1,4 +1,4 @@
-function plot_massif_topography(output_path,massif_number,bounds)
+function plot_massif_topography(output_path, massif_number, bounds, individual_dem_scale)
 %PLOT_MASSIF_TOPOGRAPHY
 % Plot all available topographic products for one SAFRAN massif.
 %
@@ -41,6 +41,10 @@ elseif ~isstruct(bounds)
 
     bounds = struct();
 
+end
+
+if nargin < 4
+    individual_dem_scale = false;
 end
 
 %% ========================================================================
@@ -89,9 +93,9 @@ for i = 1:numel(folders)
         output_path, ...
         name, ...
         sprintf( ...
-            "%s_massif_%s.tif", ...
-            name, ...
-            massif_string));
+        "%s_massif_%s.tif", ...
+        name, ...
+        massif_string));
 
     if isfile(product_file)
         products{end+1} = name;
@@ -140,8 +144,8 @@ if isfile(mask_file)
 
     [MASKplot,Rmaskplot] = ...
         read_downsample_geotiff( ...
-            mask_file, ...
-            plot_factor);
+        mask_file, ...
+        plot_factor);
 
     MASKplot = MASKplot > 0;
 
@@ -152,8 +156,8 @@ elseif isfile(dem_file)
 
     [DEMmask,Rmaskplot] = ...
         read_downsample_geotiff( ...
-            dem_file, ...
-            plot_factor);
+        dem_file, ...
+        plot_factor);
 
     MASKplot = isfinite(DEMmask);
 
@@ -207,16 +211,16 @@ for i = 1:nProducts
         output_path, ...
         product, ...
         sprintf( ...
-            "%s_massif_%s.tif", ...
-            product, ...
-            massif_string));
+        "%s_massif_%s.tif", ...
+        product, ...
+        massif_string));
 
     %% Read directly at plotting resolution
 
     [Aplot,Rplot] = ...
         read_downsample_geotiff( ...
-            product_file, ...
-            plot_factor);
+        product_file, ...
+        plot_factor);
 
     %% Validate sampled grid
 
@@ -276,7 +280,26 @@ for i = 1:nProducts
 
     clim_product = theoretical_clim;
 
-    if isfield(bounds,field)
+    if strcmpi(product, "DEM") && individual_dem_scale
+
+        % Use the elevation range of this massif only
+        valid_values = Aplot(isfinite(Aplot));
+
+        fprintf("Massif %02d: DEM data range = %.2f to %.2f m\n", ...
+            massif_number, min(valid_values), max(valid_values));
+
+        if ~isempty(valid_values)
+
+            clim_product = [min(valid_values), max(valid_values)];
+
+            % Avoid identical colour limits for a constant-valued raster
+            if clim_product(1) == clim_product(2)
+                clim_product = clim_product + [-0.5, 0.5];
+            end
+
+        end
+
+    elseif isfield(bounds, field)
 
         candidate = bounds.(field);
 
@@ -291,7 +314,12 @@ for i = 1:nProducts
 
     end
 
-    clim(ax,clim_product)
+    if strcmpi(product, "DEM")
+        fprintf("Massif %02d: DEM limits = %.2f to %.2f m\n", ...
+            massif_number, clim_product(1), clim_product(2));
+    end
+
+    clim(ax, clim_product)
 
     %% Axes
 
@@ -330,8 +358,8 @@ end
 
 sgtitle( ...
     sprintf( ...
-        "LiDAR HD topography — SAFRAN massif %s", ...
-        massif_string), ...
+    "LiDAR HD topography — SAFRAN massif %s", ...
+    massif_string), ...
     "FontWeight","bold");
 
 %% ========================================================================
@@ -341,8 +369,8 @@ sgtitle( ...
 outfile = fullfile( ...
     diagnostics_folder, ...
     sprintf( ...
-        "LiDAR_HD_massif_%s_topography.png", ...
-        massif_string));
+    "LiDAR_HD_massif_%s_topography.png", ...
+    massif_string));
 
 fig.Visible = "off";
 

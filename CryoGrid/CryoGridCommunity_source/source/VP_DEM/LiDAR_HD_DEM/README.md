@@ -744,6 +744,85 @@ runs the VP preparation modules in the appropriate order.
 
 ---
 
+# Generate DEM from bounding boxes
+
+Define the main DEM directory and choose the LiDAR resolution, e.g. for 1m:
+
+```matlab
+dem_path = 'CryoGrid_VP_Workflow\CryoGrid\CryoGridCommunity_forcing\DEM';
+lidar_path = fullfile(dem_path,'LiDAR_HD_DEM_1m');
+```
+
+1. Choose the desired resolution and create the corresponding `lidar_path` directory.
+2. Inside `lidar_path`, create a directory for your shapefile (e.g. `shapefile_massifs_test`). Create a `params_bbox_shapefile.m` file inside it, defining the bounding boxes and custom massif identifiers:
+
+```matlab
+% -------------------------------------------------------------------------
+% Bounding boxes (Lambert-93, metres)
+% Each row: [xmin, ymin, xmax, ymax]
+% -------------------------------------------------------------------------
+
+B = [
+    999259.48, 6542846.75, 1000259.48, 6543846.75
+    993179.89, 6508675.60,  994179.89, 6509675.60
+    987060.51, 6428337.69,  988060.51, 6429337.69
+];
+
+% -------------------------------------------------------------------------
+% Custom massif identifiers
+% -------------------------------------------------------------------------
+
+massif_num = [
+    101
+    102
+    103
+];
+
+% -------------------------------------------------------------------------
+% Output
+% -------------------------------------------------------------------------
+
+outputFile = fullfile( ...
+    'lidar_path\shapefile_massifs_test', ...
+    'shapefile_massifs_test');
+
+% -------------------------------------------------------------------------
+% Polygon attributes
+% -------------------------------------------------------------------------
+
+names = {
+    'Massif_101'
+    'Massif_102'
+    'Massif_103'
+};
+
+reducedNames = {
+    'M101'
+    'M102'
+    'M103'
+};
+```
+
+3. Generate the shapefile:
+
+```matlab
+write_bbox_shapefile('lidar_path\shapefile_massifs_test\params_bbox_shapefile.m')
+```
+
+4. Run the DEM processing in independent mode, using the selected resolution and enabling diagnostics:
+
+```matlab
+prepare_dem(dem_path, ...
+    'lidar_path\shapefile_massifs_test\shapefile_massifs_test.shp', ...
+    "Resolution",1, ...
+    "Diagnostics",true, ...
+    "ProcessingMode","Independent")
+```
+
+This produces individual DEM, slope and aspect rasters for each selected massif, without merging them into a continuous Alpine DEM.
+
+---
+
 # IGN WMS downloads and restart capability
 
 IGN LiDAR HD WMS requests become unreliable for very large images.
