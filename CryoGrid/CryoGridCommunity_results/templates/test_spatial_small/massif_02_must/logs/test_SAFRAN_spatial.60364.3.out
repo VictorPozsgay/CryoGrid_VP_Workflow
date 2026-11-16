@@ -1,0 +1,77 @@
+DEBUG: POINT=4
+DEBUG: N_POINTS=5
+MASSIF_NUM=2
+RUN_NAME=test_SAFRAN_spatial
+N_POINTS=5
+POINT=4
+CryoGrid point 4/5
+run: test_SAFRAN_spatial
+massif: 2
+node: lapp-wn355.in2p3.fr
+start: Mon Nov  2 11:08:18 AM CET 2026
+/mustfs/MUST-DATA/edytem/permafrost/CryoGridCommunity_cpp/pozsgayv/CryoGridCommunity_results/test_SAFRAN_spatial/test_SAFRAN_spatial.xlsx
+Warning: PARA data_product in class FORCING_seb_toElevation not assigned
+Warning: PARA data_product in class FORCING_seb_toElevation not assigned
+Warning: PARA data_product in class FORCING_seb_toElevation not assigned
+Warning: PARA tag2 in class OUT_FDD_TDD not assigned
+Warning: PARA tag2 in class OUT_regridded not assigned
+Warning: PARA tag in class OUT_last_timestep not assigned
+Warning: PARA tag2 in class OUT_last_timestep not assigned
+Warning: PARA tag2 in class INIT_TTOP_from_out not assigned
+Warning: PARA conductivity_function in class GROUND_freezeC_bucketW_seb_snow not assigned
+Warning: PARA conductivity_function in class GROUND_freezeC_seb_snow not assigned
+Warning: PARA snow_property_function in class SNOW_crocus_bucketW_seb not assigned
+Archive objects restored successfully.
+task 4 of 5: sample centroids 4 to 4
+running grid cell 65672 on worker 1
+running tile number 1
+running round 1
+finds the correct SAFRAN massif
+The massif is Aravis, with massif number 2 
+interpolating SAFRAN data vertically
+point elevation is: 1367.25 m 
+nearest forcing elevations are: 132.75 m and 167.25 m 
+with respective weights: 0.557 and 0.443 
+creating look-up tables
+
+
+running tile number 2
+running round 1
+finds the correct SAFRAN massif
+The massif is Aravis, with massif number 2 
+interpolating SAFRAN data vertically
+point elevation is: 1367.25 m 
+nearest forcing elevations are: 132.75 m and 167.25 m 
+with respective weights: 0.557 and 0.443 
+01-Sep-1940 06:00:00
+01-Sep-1940 12:00:00
+01-Sep-1940 18:00:00
+02-Sep-1940
+
+
+running tile number 3
+running round 1
+finds the correct SAFRAN massif
+The massif is Aravis, with massif number 2 
+interpolating SAFRAN data vertically
+point elevation is: 1367.25 m 
+nearest forcing elevations are: 132.75 m and 167.25 m 
+with respective weights: 0.557 and 0.443 
+creating look-up tables
+
+
+running tile number 4
+running round 1
+finds the correct SAFRAN massif
+The massif is Aravis, with massif number 2 
+interpolating SAFRAN data vertically
+point elevation is: 1367.25 m 
+nearest forcing elevations are: 132.75 m and 167.25 m 
+with respective weights: 0.557 and 0.443 
+01-Sep-1940 06:00:00
+01-Sep-1940 12:00:00
+01-Sep-1940 18:00:00
+02-Sep-1940
+02-Sep-1940
+grid cell 65672 finished on worker 1
+point 4 finished: Mon Nov  2 11:09:08 AM CET 2026
