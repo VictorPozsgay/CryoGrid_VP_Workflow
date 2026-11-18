@@ -749,8 +749,9 @@ runs the VP preparation modules in the appropriate order.
 Define the main DEM directory and choose the LiDAR resolution, e.g. for 1m:
 
 ```matlab
-dem_path = 'CryoGrid_VP_Workflow\CryoGrid\CryoGridCommunity_forcing\DEM';
-lidar_path = fullfile(dem_path,'LiDAR_HD_DEM_1m');
+dem_path = "CryoGrid_VP_Workflow\CryoGrid\CryoGridCommunity_forcing\DEM";
+lidar_path = fullfile(dem_path,"LiDAR_HD_DEM_1m");
+shp_name = "shapefile_massifs_test";
 ```
 
 1. Choose the desired resolution and create the corresponding `lidar_path` directory.
@@ -782,9 +783,7 @@ massif_num = [
 % Output
 % -------------------------------------------------------------------------
 
-outputFile = fullfile( ...
-    'lidar_path\shapefile_massifs_test', ...
-    'shapefile_massifs_test');
+outputFile = fullfile(lidar_path,shp_name,shp_name);
 
 % -------------------------------------------------------------------------
 % Polygon attributes
@@ -806,14 +805,14 @@ reducedNames = {
 3. Generate the shapefile:
 
 ```matlab
-write_bbox_shapefile('lidar_path\shapefile_massifs_test\params_bbox_shapefile.m')
+write_bbox_shapefile(fullfile(lidar_path,shp_name,"params_bbox_shapefile.m"))
 ```
 
 4. Run the DEM processing in independent mode, using the selected resolution and enabling diagnostics:
 
 ```matlab
 prepare_dem(dem_path, ...
-    'lidar_path\shapefile_massifs_test\shapefile_massifs_test.shp', ...
+    fullfile(lidar_path,shp_name,shp_name+".shp"), ...
     "Resolution",1, ...
     "Diagnostics",true, ...
     "ProcessingMode","Independent")
